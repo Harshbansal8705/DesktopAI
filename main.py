@@ -1,7 +1,6 @@
 # main.py
+import asyncio, edge_tts, os, sys, tempfile, speech_recognition as sr, threading
 from assistant import agent
-import asyncio, edge_tts, os, sys, tempfile, speech_recognition as sr
-
 
 class SuppressPrint:
     def __enter__(self):
@@ -16,25 +15,6 @@ class SuppressPrint:
         sys.stdout = self._original_stdout
         sys.stderr = self._original_stderr
 
-
-def listen():
-    r = sr.Recognizer()
-    with sr.Microphone() as source:
-        print("🎤 Listening...")
-        audio = r.listen(source)
-
-    try:
-        text = r.recognize_google(audio)
-        print(f"🧠 You said: {text}")
-        return text
-    except sr.UnknownValueError:
-        print("😕 Sorry, I could not understand audio.")
-        return ""
-    except sr.RequestError as e:
-        print(f"😞 Could not request results; {e}")
-        return ""
-
-
 async def speak(text):
     communicate = edge_tts.Communicate(text=text, voice="en-US-RogerNeural", rate="+30%")
     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmpfile:
@@ -47,22 +27,58 @@ async def speak(text):
     os.system(f"mpg123 {filename}")
     os.remove(filename)
 
-a = True
+class BackgroundAssistant:
+    def __init__(self):
+        self.recognizer = sr.Recognizer()
+        self.mic = sr.Microphone()
+        self.lock = threading.Lock()  # prevent multiple calls simultaneously
 
-while True:
-    query = input("\n🧠 Ask Jarvis: ")
-    # query = listen()
-    if not query:
-        continue
-    # if a:
-    #     query = listen()
-    #     a = False
-    # else:
-    #     query = input("\n🧠 Ask Jarvis: ")
-    if query.lower() in ["exit", "quit"]:
-        break
-    response = agent.invoke(query)
-    print(f"🤖 Jarvis: {response}")
-    asyncio.run(speak(response["output"]))  # Speak the response
-    # print_and_speak(response)  # Speak the response
-    # print(f"🗣️ Jarvis: {response}")
+        with self.mic as source:
+            print("🎙️ Calibrating mic for ambient noise...")
+            self.recognizer.adjust_for_ambient_noise(source, duration=2)
+            print("🎙️ Energy threshold set to:", self.recognizer.energy_threshold)
+
+    def callback(self, recognizer, audio):
+        # Called whenever a phrase is detected
+        threading.Thread(target=self.process_audio, args=(recognizer, audio)).start()
+
+    def process_audio(self, recognizer, audio):
+        with self.lock:
+            try:
+                print("🎤 Recognizing...")
+                query = recognizer.recognize_google(audio)
+                print(f"🧠 You said: {query}")
+            except sr.UnknownValueError:
+                print("😕 Sorry, I could not understand audio.")
+                return
+            except sr.RequestError as e:
+                print(f"😞 Could not request results; {e}")
+                return
+
+            if query.lower() in ["exit", "quit"]:
+                print("👋 Exiting Jarvis...")
+                os._exit(0)
+
+            response = agent.invoke(query)
+            print(f"🤖 Jarvis: {response}")
+            asyncio.run(speak(response["output"]))
+
+    def start(self):
+        self.stop = self.recognizer.listen_in_background(self.mic, self.callback)
+        print("🔊 Jarvis is listening in the background... Say something!")
+
+    def stop_listening(self):
+        if self.stop:
+            self.stop(wait_for_stop=False)
+            print("🛑 Stopped listening.")
+
+# Run the assistant
+if __name__ == "__main__":
+    assistant = BackgroundAssistant()
+    assistant.start()
+
+    try:
+        while True:
+            pass  # Keep main thread alive
+    except KeyboardInterrupt:
+        assistant.stop_listening()

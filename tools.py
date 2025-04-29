@@ -1,16 +1,7 @@
 # tools.py
-import subprocess, ast
+import subprocess
 from langchain.tools import tool
-import pyttsx3
 from typing import Optional
-
-engine = pyttsx3.init()
-
-
-def speak(text):
-    """Function to speak out the provided text"""
-    engine.say(text)
-    engine.runAndWait()
 
 
 @tool
