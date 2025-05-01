@@ -1,7 +1,6 @@
 # tools.py
 import subprocess
 from langchain.tools import tool
-from typing import Optional
 
 
 @tool
@@ -17,21 +16,21 @@ def run_command(command: str) -> str:
 
 
 @tool
-def open_google_chrome(params: dict) -> str:
+def open_google_chrome(url: str) -> str:
     """
     Open Google Chrome with the specified URL.
 
     Parameters:
-    - url (str): URL to open.
-    - new_window (python bool: optional): Whether to open in a new window (True | False) Default = False.
+    - url (str): The URL to open in Google Chrome. (new_window:<url> opens the url in new window)
     """
-    # params = ast.literal_eval(params)
-    url: Optional[str] = params.get("url")
-    new_window: str = params.get("new_window", "False")
-    print(params)
+    # Check if the URL contains the "new_window:" prefix
+    new_window = False
+    if url.startswith("new_window:"):
+        new_window = True
+        url = url[len("new_window:") :]
 
     if url:
-        command = f"google-chrome-stable {'--new-window' if new_window.lower() == "true" else ''} {url}"
+        command = f"google-chrome-stable {'--new-window' if new_window else ''} {url}"
     else:
         command = "google-chrome-stable"
 
