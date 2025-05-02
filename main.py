@@ -1,20 +1,9 @@
 # main.py
-import asyncio, edge_tts, os, sys, tempfile, speech_recognition as sr, threading, subprocess
+import asyncio, edge_tts, os, tempfile, speech_recognition as sr, threading, subprocess
 from assistant import agent
+from logger import setup_logger
 
-
-class SuppressPrint:
-    def __enter__(self):
-        self._original_stdout = sys.stdout
-        self._original_stderr = sys.stderr
-        sys.stdout = open(os.devnull, "w")
-        sys.stderr = open(os.devnull, "w")
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        sys.stdout.close()
-        sys.stderr.close()
-        sys.stdout = self._original_stdout
-        sys.stderr = self._original_stderr
+logger = setup_logger("main", "logs/main.log", level=os.getenv("LOG_LEVEL", "INFO"))
 
 
 class BackgroundAssistant:
@@ -30,12 +19,17 @@ class BackgroundAssistant:
 
         with self.mic as source:
             asyncio.run(self.speak("Calibrating mic for ambient noise..."))
-            print("🎙️ Calibrating mic for ambient noise...")
+            logger.info("🎙️ Calibrating mic for ambient noise...")
             self.recognizer.adjust_for_ambient_noise(source, duration=2)
-            if (self.recognizer.energy_threshold > 500):
+            if self.recognizer.energy_threshold > 500:
                 self.recognizer.adjust_for_ambient_noise(source, duration=2)
-            asyncio.run(self.speak("Energy threshold set to: " + f"{self.recognizer.energy_threshold:.2f}"))
-            print("🎙️ Energy threshold set to:", self.recognizer.energy_threshold)
+            asyncio.run(
+                self.speak(
+                    "Energy threshold set to: "
+                    + f"{self.recognizer.energy_threshold:.2f}"
+                )
+            )
+            logger.info(f"🎙️ Energy threshold set to: {self.recognizer.energy_threshold}")
 
     def _play_audio(self, filename):
         self.speaking_process = subprocess.Popen(["mpg123", "-q", filename])
@@ -49,10 +43,9 @@ class BackgroundAssistant:
         )
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmpfile:
             filename = tmpfile.name
-            with SuppressPrint():
-                async for chunk in communicate.stream():
-                    if chunk["type"] == "audio":
-                        tmpfile.write(chunk["data"])
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio":
+                    tmpfile.write(chunk["data"])
 
         # Play audio in a background thread (non-blocking)
         self.speaking_thread = threading.Thread(
@@ -67,14 +60,14 @@ class BackgroundAssistant:
     def process_audio(self, recognizer, audio):
         with self.lock:
             try:
-                print("🎤 Recognizing...")
+                logger.debug("Recognizing speech...")
                 text = recognizer.recognize_google(audio)
-                print(f"🧠 You said: {text}")
+                logger.info(f"Recognized: {text}")
             except sr.UnknownValueError:
-                print("😕 Sorry, I could not understand audio.")
+                logger.debug("😕 Sorry, I could not understand audio.")
                 return
             except sr.RequestError as e:
-                print(f"😞 Could not request results; {e}")
+                logger.error(f"RequestError: {e}")
                 return
 
             # Wake word detection: find 'jarvis' anywhere
@@ -84,7 +77,7 @@ class BackgroundAssistant:
                 index = lower_text.find("jarvis")
                 query = text[index + len("jarvis") :].strip()
             else:
-                print("🙉 Wake word not detected. Ignoring...")
+                logger.debug("🙉 Wake word not detected. Ignoring...")
                 return
 
             # Check if Jarvis is already speaking
@@ -94,34 +87,33 @@ class BackgroundAssistant:
                 self.speaking_process = None
 
             if query.lower() in ["exit", "quit"]:
-                print("👋 Exiting Jarvis...")
+                logger.info("👋 Exiting Jarvis...")
                 asyncio.run(self.speak("Shutting down!"))
                 self.exit_event.set()
                 return
 
             if not query:
-                print("😶 You addressed Jarvis, but gave no command.")
+                logger.debug("😶 You addressed Jarvis, but gave no command.")
                 return
 
+            logger.debug(f"Invoking agent with: {query}")
             response = agent.invoke(
-                {
-                    "messages": [
-                        {"role": "user", "content": query}
-                    ]
+                {"messages": [{"role": "user", "content": query}]},
+                config={
+                    "configurable": {"user_name": "Harsh Bansal", "thread_id": "1"}
                 },
-                config={"configurable": {"user_name": "Harsh Bansal", "thread_id": "1"}}
             )
-            print(f"🤖 Jarvis: {response["messages"][-1].content}")
+            logger.info(f"Agent response: {response['messages'][-1].content}")
             asyncio.run(self.speak(response["messages"][-1].content))
 
     def start(self):
         self.stop = self.recognizer.listen_in_background(self.mic, self.callback)
-        print("🔊 Jarvis is listening in the background... Say something!")
+        logger.info("🔊 Jarvis is listening in the background... Say something!")
 
     def stop_listening(self):
         if self.stop:
             self.stop(wait_for_stop=False)
-            print("🛑 Stopped listening.")
+            logger.info("🛑 Stopped listening.")
 
 
 # Run the assistant

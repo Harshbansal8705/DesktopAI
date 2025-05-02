@@ -8,10 +8,14 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.prebuilt import create_react_agent
 from langgraph.prebuilt.chat_agent_executor import AgentState
 from langmem.short_term import SummarizationNode
-from typing import Any
+from logger import setup_logger
 from tools import run_command, open_google_chrome, open_whatsapp_web, do_nothing
+from typing import Any
+import os
 
 load_dotenv()
+
+logger = setup_logger("assistant", "logs/assistant.log", level=os.getenv("LOG_LEVEL", "INFO"))
 
 checkpointer = InMemorySaver()
 
@@ -21,15 +25,9 @@ class State(AgentState):
 
 def prompt(state: AgentState, config: RunnableConfig) -> list[AnyMessage]:
     user_name = config["configurable"].get("user_name")
+    logger.debug(f"Generating prompt for user: {user_name}")
     system_msg = f"You are a helpful assistant. Address the user as {user_name}."
     return [{"role": "system", "content": system_msg}] + state["messages"]
-
-
-# model = ChatTogether(
-#     model="meta-llama/Llama-3.3-70B-Instruct-Turbo",
-#     temperature=0.8,
-#     api_key=os.environ.get("TOGETHER_API_KEY"),
-# )
 
 model = init_chat_model(
     "gemini-2.5-pro-exp-03-25",
@@ -37,6 +35,8 @@ model = init_chat_model(
     temperature=0.8,
     verbose=True
 )
+
+logger.info("Chat model initialized.")
 
 summarization_node = SummarizationNode(
     token_counter=count_tokens_approximately,
@@ -77,6 +77,8 @@ agent = create_react_agent(
     state_schema=State,
     checkpointer=checkpointer,
 )
+
+logger.info("Agent initialized.")
 
 
 if __name__ == "__main__":

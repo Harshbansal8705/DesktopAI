@@ -8,6 +8,7 @@ attrs==25.3.0
 audioop-lts==0.2.1
 certifi==2025.4.26
 charset-normalizer==3.4.2
+colorama==0.4.6
 distro==1.9.0
 dydantic==0.0.8
 edge-tts==7.0.2
