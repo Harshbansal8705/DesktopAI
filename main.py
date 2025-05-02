@@ -103,8 +103,14 @@ class BackgroundAssistant:
                     "configurable": {"user_name": "Harsh Bansal", "thread_id": "1"}
                 },
             )
-            logger.info(f"Agent response: {response['messages'][-1].content}")
-            asyncio.run(self.speak(response["messages"][-1].content))
+
+            # Handle the case when response["messages"][-1].content is a list of messages
+            res_msg = response["messages"][-1].content
+            if isinstance(res_msg, list):
+                res_msg = "\n".join([msg.content for msg in res_msg])
+
+            logger.info(f"Agent response: {res_msg}")
+            asyncio.run(self.speak(res_msg))
 
     def start(self):
         self.stop = self.recognizer.listen_in_background(self.mic, self.callback)
