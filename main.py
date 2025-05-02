@@ -103,9 +103,16 @@ class BackgroundAssistant:
                 print("😶 You addressed Jarvis, but gave no command.")
                 return
 
-            response = agent.invoke(query)
-            print(f"🤖 Jarvis: {response}")
-            asyncio.run(self.speak(response["output"]))
+            response = agent.invoke(
+                {
+                    "messages": [
+                        {"role": "user", "content": query}
+                    ]
+                },
+                config={"configurable": {"user_name": "Harsh Bansal", "thread_id": "1"}}
+            )
+            print(f"🤖 Jarvis: {response["messages"][-1].content}")
+            asyncio.run(self.speak(response["messages"][-1].content))
 
     def start(self):
         self.stop = self.recognizer.listen_in_background(self.mic, self.callback)
