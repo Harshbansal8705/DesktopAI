@@ -1,7 +1,10 @@
 # main.py
-import asyncio, edge_tts, os, tempfile, speech_recognition as sr, threading, subprocess
+import asyncio, edge_tts, os, tempfile, speech_recognition as sr, threading
 from assistant import agent
 from logger import setup_logger
+from pydub import AudioSegment
+from pydub.playback import _play_with_pyaudio
+from threading import Event
 
 logger = setup_logger("main", "logs/main.log", level=os.getenv("LOG_LEVEL", "INFO"))
 
@@ -29,13 +32,28 @@ class BackgroundAssistant:
                     + f"{self.recognizer.energy_threshold:.2f}"
                 )
             )
-            logger.info(f"🎙️ Energy threshold set to: {self.recognizer.energy_threshold}")
+            logger.info(
+                f"🎙️ Energy threshold set to: {self.recognizer.energy_threshold}"
+            )
 
     def _play_audio(self, filename):
-        self.speaking_process = subprocess.Popen(["mpg123", "-q", filename])
-        self.speaking_process.wait()
-        self.speaking_process = None
+        audio = AudioSegment.from_file(filename)
         os.remove(filename)
+
+        # Save playback stream for control
+        self.stop_playback_event = Event()
+
+        def play():
+            try:
+                stream = _play_with_pyaudio(audio)
+                self.active_audio_stream = stream
+            except Exception as e:
+                logger.error(f"Error in audio playback: {e}")
+
+            self.active_audio_stream = None
+
+        self.speaking_thread = threading.Thread(target=play)
+        self.speaking_thread.start()
 
     async def speak(self, text):
         communicate = edge_tts.Communicate(
@@ -47,11 +65,15 @@ class BackgroundAssistant:
                 if chunk["type"] == "audio":
                     tmpfile.write(chunk["data"])
 
-        # Play audio in a background thread (non-blocking)
-        self.speaking_thread = threading.Thread(
-            target=self._play_audio, args=(filename,)
-        )
-        self.speaking_thread.start()
+        # Interrupt current playback if any
+        if self.speaking_thread and self.speaking_thread.is_alive():
+            self.stop_playback_event.set()
+            if self.active_audio_stream:
+                self.active_audio_stream.stop_stream()
+                self.active_audio_stream.close()
+            self.speaking_thread.join()
+
+        self._play_audio(filename)
 
     def callback(self, recognizer, audio):
         # Called whenever a phrase is detected
