@@ -6,6 +6,7 @@ from langchain.tools import tool
 @tool
 def run_command(command: str) -> str:
     """Run a shell command on the local Linux machine."""
+    print("Running command:", command)
     try:
         output = subprocess.check_output(
             command, shell=True, stderr=subprocess.STDOUT, text=True
@@ -39,3 +40,21 @@ def open_google_chrome(url: str) -> str:
         return f"Google Chrome opened with URL: {url}"
     except Exception as e:
         return f"Error opening Google Chrome: {e}"
+
+
+@tool
+def open_whatsapp_web() -> str:
+    """
+    Open WhatsApp Web.
+    """
+    # os.system("gtk-launch ~/.local/share/applications/chrome-hnpfjngllnobngcgfapefoaidbinmjnm-Default.desktop")
+    subprocess.Popen(["gtk-launch", "chrome-hnpfjngllnobngcgfapefoaidbinmjnm-Default.desktop"])
+
+
+@tool
+def do_nothing() -> None:
+    """
+    A function that does nothing.
+    """
+    print("Doing nothing...")
+    return None
