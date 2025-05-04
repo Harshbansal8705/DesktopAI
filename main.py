@@ -1,10 +1,7 @@
-# main.py
-import asyncio, edge_tts, os, tempfile, speech_recognition as sr, threading
+import os, speech_recognition as sr, threading
 from assistant import agent
 from logger import setup_logger
-from pydub import AudioSegment
-from pydub.playback import _play_with_pyaudio
-from threading import Event
+from ttsplayer import TTSPlayer
 
 logger = setup_logger("main", "logs/main.log", level=os.getenv("LOG_LEVEL", "INFO"))
 
@@ -14,66 +11,24 @@ class BackgroundAssistant:
         self.recognizer = sr.Recognizer()
         self.mic = sr.Microphone()
         self.lock = threading.Lock()  # prevent multiple calls simultaneously
-        self.recognizer.pause_threshold = 1
+        self.recognizer.pause_threshold = 2
         self.recognizer.non_speaking_duration = 0.5
-        self.speaking_process = None
-        self.speaking_thread = None
+        self.speech = TTSPlayer()
+        self.speech.start()
         self.exit_event = threading.Event()
 
         with self.mic as source:
-            asyncio.run(self.speak("Calibrating mic for ambient noise..."))
+            self.speech.speak("Calibrating mic for ambient noise...")
             logger.info("🎙️ Calibrating mic for ambient noise...")
             self.recognizer.adjust_for_ambient_noise(source, duration=2)
             if self.recognizer.energy_threshold > 500:
                 self.recognizer.adjust_for_ambient_noise(source, duration=2)
-            asyncio.run(
-                self.speak(
-                    "Energy threshold set to: "
-                    + f"{self.recognizer.energy_threshold:.2f}"
-                )
+
+            calibration_msg = (
+                f"Energy threshold set to: {self.recognizer.energy_threshold:.2f}"
             )
-            logger.info(
-                f"🎙️ Energy threshold set to: {self.recognizer.energy_threshold}"
-            )
-
-    def _play_audio(self, filename):
-        audio = AudioSegment.from_file(filename)
-        os.remove(filename)
-
-        # Save playback stream for control
-        self.stop_playback_event = Event()
-
-        def play():
-            try:
-                stream = _play_with_pyaudio(audio)
-                self.active_audio_stream = stream
-            except Exception as e:
-                logger.error(f"Error in audio playback: {e}")
-
-            self.active_audio_stream = None
-
-        self.speaking_thread = threading.Thread(target=play)
-        self.speaking_thread.start()
-
-    async def speak(self, text):
-        communicate = edge_tts.Communicate(
-            text=text, voice="en-US-RogerNeural", rate="+30%"
-        )
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmpfile:
-            filename = tmpfile.name
-            async for chunk in communicate.stream():
-                if chunk["type"] == "audio":
-                    tmpfile.write(chunk["data"])
-
-        # Interrupt current playback if any
-        if self.speaking_thread and self.speaking_thread.is_alive():
-            self.stop_playback_event.set()
-            if self.active_audio_stream:
-                self.active_audio_stream.stop_stream()
-                self.active_audio_stream.close()
-            self.speaking_thread.join()
-
-        self._play_audio(filename)
+            self.speech.speak(calibration_msg)
+            logger.info(f"🎙️ {calibration_msg}")
 
     def callback(self, recognizer, audio):
         # Called whenever a phrase is detected
@@ -102,15 +57,9 @@ class BackgroundAssistant:
                 logger.debug("🙉 Wake word not detected. Ignoring...")
                 return
 
-            # Check if Jarvis is already speaking
-            if self.speaking_process and self.speaking_process.poll() is None:
-                self.speaking_process.terminate()
-                self.speaking_thread.join()
-                self.speaking_process = None
-
             if query.lower() in ["exit", "quit"]:
                 logger.info("👋 Exiting Jarvis...")
-                asyncio.run(self.speak("Shutting down!"))
+                self.speech.speak("Shutting down!")
                 self.exit_event.set()
                 return
 
@@ -132,7 +81,7 @@ class BackgroundAssistant:
                 res_msg = "\n".join([msg.content for msg in res_msg])
 
             logger.info(f"Agent response: {res_msg}")
-            asyncio.run(self.speak(res_msg))
+            self.speech.speak(res_msg)
 
     def start(self):
         self.stop = self.recognizer.listen_in_background(self.mic, self.callback)
@@ -142,18 +91,15 @@ class BackgroundAssistant:
         if self.stop:
             self.stop(wait_for_stop=False)
             logger.info("🛑 Stopped listening.")
+        self.speech.shutdown()
+
+        self.exit_event.set()
 
 
 # Run the assistant
 if __name__ == "__main__":
     assistant = BackgroundAssistant()
     assistant.start()
-
-    try:
-        while not assistant.exit_event.is_set():
-            pass  # Keep main thread alive
-    except KeyboardInterrupt:
-        assistant.stop_listening()
-    finally:
-        assistant.stop_listening()
-        exit(0)
+    assistant.exit_event.wait()
+    assistant.stop_listening()
+    exit(0)
