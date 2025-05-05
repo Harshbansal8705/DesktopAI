@@ -205,7 +205,6 @@ class TransparentOverlayQt(QMainWindow):
     def start(self):
         """Start the overlay."""
         self.update_status("Jarvis Active", "lightgreen")
-        self.show()
 
     def shutdown(self):
         """Shut down the overlay."""

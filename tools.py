@@ -2,6 +2,7 @@
 import os, subprocess
 from langchain.tools import tool
 from logger import setup_logger
+from widget import overlay
 
 logger = setup_logger("tools", "logs/tools.log", level=os.getenv("LOG_LEVEL", "INFO"))
 
@@ -64,6 +65,24 @@ def open_whatsapp_web() -> str:
     except Exception as e:
         logger.error(f"[open_whatsapp_web] Error: {e}")
         return f"Error: {e}"
+
+
+@tool
+def show_logs_widget() -> str:
+    """
+    Show the logs widget
+    """
+    overlay.show()
+    return "Logs widget opened."
+
+
+@tool
+def hide_logs_widget() -> str:
+    """
+    Hide the logs widget
+    """
+    overlay.hide()
+    return "Logs widget closed."
 
 
 @tool
