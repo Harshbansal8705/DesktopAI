@@ -36,29 +36,32 @@ class BackgroundAssistant:
         threading.Thread(target=self.process_audio, args=(recognizer, audio)).start()
 
     def process_audio(self, recognizer, audio):
-        with self.lock:
-            try:
-                logger.debug("Recognizing speech...")
-                text = recognizer.recognize_google(audio)
-                logger.debug(f"Recognized: {text}")
-            except sr.UnknownValueError:
-                logger.debug("😕 Sorry, I could not understand audio.")
-                return
-            except sr.RequestError as e:
-                logger.error(f"RequestError: {e}")
-                return
+        try:
+            with self.lock:
+                try:
+                    logger.debug("Recognizing speech...")
+                    text = recognizer.recognize_google(audio)
+                    logger.debug(f"Recognized: {text}")
+                except sr.UnknownValueError:
+                    logger.debug("😕 Sorry, I could not understand audio.")
+                    return
+                except sr.RequestError as e:
+                    logger.error(f"RequestError: {e}")
+                    return
 
-            # Wake word detection: find 'jarvis' anywhere
-            lower_text = text.lower()
-            if "jarvis" in lower_text:
-                # Strip everything before 'jarvis'
-                index = lower_text.find("jarvis")
-                query = text[index + len("jarvis") :].strip()
-            else:
-                logger.debug("🙉 Wake word not detected. Ignoring...")
-                return
+                # Wake word detection: find 'jarvis' anywhere
+                lower_text = text.lower()
+                if "jarvis" in lower_text:
+                    # Strip everything before 'jarvis'
+                    index = lower_text.find("jarvis")
+                    query = text[index + len("jarvis") :].strip()
+                else:
+                    logger.debug("🙉 Wake word not detected. Ignoring...")
+                    return
 
-            self.process_query(query)
+                self.process_query(query)
+        except Exception as e:
+            logger.error(f"[process_audio] Unexpected error: {e}")
 
     def process_query(self, query: str):
         overlay.put_message("query", query)

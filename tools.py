@@ -18,8 +18,11 @@ def run_command(command: str) -> str:
         logger.debug(f"[run_command] Output:\n{output}")
         return f"Command executed:\n{output}"
     except subprocess.CalledProcessError as e:
-        logger.error(f"[run_command] Error:\n{e.output}")
-        return f"Error:\n{e.output}"
+        logger.error(f"[run_command] Error:\n{e}")
+        return f"Error:\n{e}"
+    except Exception as e:
+        logger.error(f"[run_command] Unexpected error: {e}")
+        return f"Unexpected error:\n{e}"
 
 
 @tool
