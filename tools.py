@@ -4,7 +4,7 @@ from langchain.tools import tool
 from logger import setup_logger
 from widget import overlay
 
-logger = setup_logger("tools", "logs/tools.log", level=os.getenv("LOG_LEVEL", "INFO"))
+logger = setup_logger("tools", "logs/tools.log", level=os.environ["LOG_LEVEL"])
 
 
 

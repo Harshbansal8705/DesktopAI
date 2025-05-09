@@ -3,7 +3,7 @@ from logger import setup_logger
 from pydub import AudioSegment
 
 logger = setup_logger(
-    "speech_manager", "logs/speech_manager.log", level=os.getenv("LOG_LEVEL", "INFO")
+    "speech_manager", "logs/speech_manager.log", level=os.environ["LOG_LEVEL"]
 )
 
 

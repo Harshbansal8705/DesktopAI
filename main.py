@@ -1,10 +1,10 @@
-import os, speech_recognition as sr, sys, threading, time
+import os, speech_recognition as sr, sys, threading
 from assistant import agent
 from logger import setup_logger
 from ttsplayer import TTSPlayer
 from widget import app, overlay
 
-logger = setup_logger("main", "logs/main.log", level=os.getenv("LOG_LEVEL", "INFO"))
+logger = setup_logger("main", "logs/main.log", level=os.environ["LOG_LEVEL"])
 
 
 class BackgroundAssistant:
@@ -62,6 +62,9 @@ class BackgroundAssistant:
                 self.process_query(query)
         except Exception as e:
             logger.error(f"[process_audio] Unexpected error: {e}")
+            overlay.put_message(
+                "status", f"[process_audio] Unexpected error: {e}", "red"
+            )
 
     def process_query(self, query: str):
         overlay.put_message("query", query)
