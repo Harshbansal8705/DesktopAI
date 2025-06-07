@@ -1,5 +1,5 @@
 import os, speech_recognition as sr, sys, threading
-from assistant import agent
+from assistant import call_agent
 from logger import setup_logger
 from ttsplayer import TTSPlayer
 from widget import app, overlay
@@ -77,15 +77,8 @@ class BackgroundAssistant:
 
         logger.debug(f"Invoking agent with: {query}")
         overlay.put_message("status", "Processing...", "gold")
-        response = agent.invoke(
-            {"messages": [{"role": "user", "content": query}]},
-            config={"configurable": {"user_name": "Harsh Bansal", "thread_id": "1"}},
-        )
 
-        # Handle the case when response["messages"][-1].content is a list of messages
-        res_msg = response["messages"][-1].content
-        if isinstance(res_msg, list):
-            res_msg = "\n".join([msg.content for msg in res_msg])
+        res_msg = call_agent(query)
 
         logger.info(f"Agent response: {res_msg}")
         overlay.put_message("response", res_msg)

@@ -33,10 +33,10 @@ def summarize_conversation(state: AgentState, max_tokens: int = 1000):
     if summary:
         prompt = (
             f"This is a summary of the conversation so far:\n{summary}\n\n"
-            "Extend the summary by including the content of the new messages above."
+            "Extend the summary by including the content of the new messages above. (Don't include this instruction in the summary)"
         )
     else:
-        prompt = "Create a summary of the conversation above:"
+        prompt = "Create a summary of the conversation above (don't include this instruction in the summary):"
 
     summarization_input = old_messages + [HumanMessage(content=prompt)]
     response = model.invoke(summarization_input)
