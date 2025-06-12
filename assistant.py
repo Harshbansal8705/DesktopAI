@@ -14,6 +14,7 @@ from tools import (
     get_screenshot,
     show_logs_widget,
     hide_logs_widget,
+    exit_assistant,
     do_nothing,
 )
 from langgraph.checkpoint.sqlite import SqliteSaver
@@ -44,6 +45,7 @@ agent = create_react_agent(
         show_logs_widget,
         hide_logs_widget,
         do_nothing,
+        exit_assistant,
     ],
     prompt=prompt,
     state_schema=State,
@@ -67,7 +69,6 @@ def call_agent(message):
     if msg.startswith("tool_message:"):
         tool_name = msg.split(":")[1]
         tool_args = msg.split(":")[2]
-        print(tool_name, tool_args)
         if tool_name == "get_screenshot":
             with open(tool_args, "rb") as image_file:
                 image_data = base64.b64encode(image_file.read()).decode("utf-8")
