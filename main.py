@@ -1,70 +1,55 @@
-import os, speech_recognition as sr, sys, threading
+import os, sys, threading, soundfile as sf, numpy as np
 from assistant import call_agent
 from logger import setup_logger
 from ttsplayer import TTSPlayer
 from widget import app, overlay
+from vad import VoiceActivityDetector
+from groq import Groq
+from tools import register_stop_assistant
 
 logger = setup_logger("main", "logs/main.log", level=os.environ["LOG_LEVEL"])
 
 
 class BackgroundAssistant:
     def __init__(self):
-        self.recognizer = sr.Recognizer()
-        self.mic = sr.Microphone()
         self.lock = threading.Lock()  # prevent multiple calls simultaneously
-        self.recognizer.pause_threshold = 2
-        self.recognizer.non_speaking_duration = 0.5
         self.speech = TTSPlayer()
         self.speech.start()
+        self.vad = VoiceActivityDetector()
+        self.groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
         overlay.start()
 
-        with self.mic as source:
-            self.speech.speak("Calibrating mic for ambient noise...")
-            logger.info("🎙️ Calibrating mic for ambient noise...")
-            overlay.put_message("status", "Calibrating Mic...", "yellow")
-            self.recognizer.adjust_for_ambient_noise(source, duration=2)
+    def process_audio(self, audio):
+        with self.lock:
+            logger.info("Processing audio...")
+            temp_file = "temp.wav"
+            try:
+                # Convert audio bytes to numpy array and save as WAV
+                audio_array = np.frombuffer(audio, dtype=np.int16)
+                sf.write(temp_file, audio_array, 16000)  # 16000 is the sample rate
 
-            calibration_msg = (
-                f"Energy threshold set to: {self.recognizer.energy_threshold:.2f}"
-            )
-            self.speech.speak(calibration_msg)
-            logger.info(f"🎙️ {calibration_msg}")
+                with open(temp_file, "rb") as f:
+                    transcription = self.groq_client.audio.transcriptions.create(
+                        file=("temp.wav", f.read()),
+                        model="distil-whisper-large-v3-en",
+                        response_format="text",
+                        prompt="Please transcribe the following audio accurately, maintaining proper punctuation and formatting. If you think there is no speech, return empty string."
+                    )
+                    logger.info(f"Transcription: {transcription}")
 
-    def callback(self, recognizer, audio):
-        # Called whenever a phrase is detected
-        threading.Thread(target=self.process_audio, args=(recognizer, audio)).start()
-
-    def process_audio(self, recognizer, audio):
-        try:
-            with self.lock:
-                try:
-                    logger.debug("Recognizing speech...")
-                    text = recognizer.recognize_google(audio)
-                    logger.debug(f"Recognized: {text}")
-                except sr.UnknownValueError:
-                    logger.debug("😕 Sorry, I could not understand audio.")
-                    return
-                except sr.RequestError as e:
-                    logger.error(f"RequestError: {e}")
-                    return
-
-                # Wake word detection: find 'jarvis' anywhere
-                lower_text = text.lower()
-                if "jarvis" in lower_text:
-                    # Strip everything before 'jarvis'
-                    index = lower_text.find("jarvis")
-                    query = text[index + len("jarvis") :].strip()
-                else:
-                    logger.debug("🙉 Wake word not detected. Ignoring...")
-                    return
-
-                self.process_query(query)
-        except Exception as e:
-            logger.error(f"[process_audio] Unexpected error: {e}")
-            overlay.put_message(
-                "status", f"[process_audio] Unexpected error: {e}", "red"
-            )
+                    # Wake word detection: find 'jarvis' anywhere
+                    lower_text = transcription.lower()
+                    if "jarvis" in lower_text:
+                        # Strip everything before 'jarvis'
+                        index = lower_text.find("jarvis")
+                        query = transcription[index + len("jarvis"):].strip()
+                        self.process_query(query)
+                    else:
+                        logger.debug("🙉 Wake word not detected. Ignoring...")
+            finally:
+                if os.path.exists(temp_file):
+                    os.remove(temp_file)
 
     def process_query(self, query: str):
         overlay.put_message("query", query)
@@ -85,23 +70,23 @@ class BackgroundAssistant:
         self.speech.speak(res_msg)
 
     def start(self):
-        self.stop = self.recognizer.listen_in_background(self.mic, self.callback)
         logger.info("🔊 Jarvis is listening in the background... Say something!")
         overlay.put_message("status", "Listening...", "skyblue")
+        threading.Thread(target=self.vad.on_speech, args=(self.process_audio,)).start()
 
     def shutdown(self):
         self.speech.speak("Shutting down!")
         overlay.put_message("status", "Shutting down...", "red")
         logger.info("Shutting down")
-        if self.stop:
-            self.stop(wait_for_stop=False)
-            logger.debug("🛑 Stopped listening.")
+        self.vad.stop_listening()
         overlay.close()
         self.speech.shutdown()
+        sys.exit(0)
 
 
 # Run the assistant
 if __name__ == "__main__":
     assistant = BackgroundAssistant()
     assistant.start()
+    register_stop_assistant(assistant.shutdown)
     sys.exit(app.exec())

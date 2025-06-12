@@ -7,6 +7,13 @@ from PIL import ImageGrab
 
 logger = setup_logger("tools", "logs/tools.log", level=os.environ["LOG_LEVEL"])
 
+_stop_assistant = False
+
+
+def register_stop_assistant(callback):
+    global _stop_assistant
+    _stop_assistant = callback
+
 
 @tool
 def run_command(command: str) -> str:
@@ -102,5 +109,18 @@ def get_screenshot() -> str:
     logger.info("[get_screenshot] Taking screenshot...")
     screenshot = ImageGrab.grab()
     screenshot.save("screenshot.png")
-    
+
     return "tool_message:get_screenshot:screenshot.png"
+
+
+@tool
+def exit_assistant() -> str:
+    """
+    Exit / Stop / Shutdown
+    """
+    if _stop_assistant:
+        _stop_assistant()
+        return "Assistant stopped."
+    else:
+        logger.warning("[exit] No stop callback registered.")
+        return "No stop callback registered."
