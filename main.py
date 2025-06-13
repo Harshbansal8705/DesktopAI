@@ -6,6 +6,7 @@ from widget import app, overlay
 from vad import VoiceActivityDetector
 from groq import Groq
 from tools import register_stop_assistant
+from thread_executor import executor
 
 logger = setup_logger("main", "logs/main.log", level=os.environ["LOG_LEVEL"])
 
@@ -47,6 +48,8 @@ class BackgroundAssistant:
                         self.process_query(query)
                     else:
                         logger.debug("🙉 Wake word not detected. Ignoring...")
+            except Exception as e:
+                logger.error(f"Error processing audio: {e}")
             finally:
                 if os.path.exists(temp_file):
                     os.remove(temp_file)
@@ -72,21 +75,20 @@ class BackgroundAssistant:
     def start(self):
         logger.info("🔊 Jarvis is listening in the background... Say something!")
         overlay.put_message("status", "Listening...", "skyblue")
-        threading.Thread(target=self.vad.on_speech, args=(self.process_audio,)).start()
+        executor.submit(self.vad.on_speech, self.process_audio)
 
     def shutdown(self):
         self.speech.speak("Shutting down!")
         overlay.put_message("status", "Shutting down...", "red")
         logger.info("Shutting down")
         self.vad.stop_listening()
-        overlay.close()
         self.speech.shutdown()
-        sys.exit(0)
-
+        executor.shutdown(wait=False, cancel_futures=True)
+        overlay.close()
 
 # Run the assistant
 if __name__ == "__main__":
     assistant = BackgroundAssistant()
-    assistant.start()
     register_stop_assistant(assistant.shutdown)
-    sys.exit(app.exec())
+    assistant.start()
+    app.exec()

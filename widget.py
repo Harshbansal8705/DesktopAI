@@ -3,7 +3,7 @@ Alternative GUI overlay using PyQt5 for better transparency support.
 Install with: pip install PyQt5
 """
 
-import sys
+import sys, os
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -18,6 +18,10 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont
 from queue import Queue
+
+from logger import setup_logger
+
+logger = setup_logger("widget", "logs/widget.log", level=os.environ["LOG_LEVEL"])
 
 
 class TransparentOverlayQt(QMainWindow):
@@ -200,7 +204,7 @@ class TransparentOverlayQt(QMainWindow):
                     self.add_log_message(f"Jarvis: {text}", "#00FF00")  # Green
 
             except Exception as e:
-                print(f"Error processing message: {e}")
+                logger.error(f"Error processing message: {e}")
 
     def start(self):
         """Start the overlay."""

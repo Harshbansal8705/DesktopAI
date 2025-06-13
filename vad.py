@@ -3,15 +3,15 @@ import torch
 
 torch.set_num_threads(1)
 import pyaudio
-import threading
-import collections
+import collections, os, threading
 from logger import setup_logger
+from thread_executor import executor
 
 model, utils = torch.hub.load(repo_or_dir="snakers4/silero-vad", model="silero_vad")
 
 (get_speech_timestamps, save_audio, read_audio, VADIterator, collect_chunks) = utils
 
-logger = setup_logger("vad", "vad.log")
+logger = setup_logger("vad", "logs/vad.log", level=os.environ["LOG_LEVEL"])
 
 
 class VoiceActivityDetector:
@@ -25,6 +25,7 @@ class VoiceActivityDetector:
         self.num_samples = 512
         self.recording = False
         self.listening = False
+        self.lock = threading.Lock()
 
         self.stream = self.audio.open(
             format=self.FORMAT,
@@ -62,29 +63,30 @@ class VoiceActivityDetector:
         return sound.squeeze()
 
     def record_audio(self, frames=[]):
-        self.recording = True
-        logger.debug("Recording started...")
-        silence_frames = 0
-        max_silence_frames = 60  # Stop recording after ~2 seconds of silence
+        with self.lock:
+            self.recording = True
+            logger.debug("Recording started...")
+            silence_frames = 0
+            max_silence_frames = 60  # Stop recording after ~2 seconds of silence
 
-        while silence_frames < max_silence_frames:
-            audio_chunk = self.stream.read(self.num_samples)
-            audio_int16 = np.frombuffer(audio_chunk, np.int16)
-            audio_float32 = self.int2float(audio_int16)
-            frames.append(audio_chunk)
+            while silence_frames < max_silence_frames:
+                audio_chunk = self.stream.read(self.num_samples)
+                audio_int16 = np.frombuffer(audio_chunk, np.int16)
+                audio_float32 = self.int2float(audio_int16)
+                frames.append(audio_chunk)
 
-            confidence = model(torch.from_numpy(audio_float32), self.SAMPLE_RATE).item()
+                confidence = model(torch.from_numpy(audio_float32), self.SAMPLE_RATE).item()
 
-            if confidence > self.threshold:
-                silence_frames = 0
-            else:
-                silence_frames += 1
+                if confidence > self.threshold:
+                    silence_frames = 0
+                else:
+                    silence_frames += 1
 
-        # Convert frames to numpy array
-        audio_data = np.frombuffer(b"".join(frames[:-60]), dtype=np.int16)
-        self.recording = False
-        logger.debug("Recording stopped...")
-        return audio_data
+            # Convert frames to numpy array
+            audio_data = np.frombuffer(b"".join(frames[:-60]), dtype=np.int16)
+            self.recording = False
+            logger.debug("Recording stopped...")
+            return audio_data
 
     def on_speech(self, func):
         # Initialize a queue to store the last 10 frames
@@ -110,7 +112,13 @@ class VoiceActivityDetector:
                 # Send audio data if it's at least 1 second long
                 if len(audio_data) / self.SAMPLE_RATE >= 1:
                     # Process in a separate thread to avoid blocking the main loop
-                    threading.Thread(target=func, args=(audio_data,)).start()
+                    future = executor.submit(func, audio_data)
+                    try:
+                        future.result()
+                    except Exception as e:
+                        logger.error(f"Error processing audio: {e}")
+
+        print("👋 Stopped listening")
 
     def stop_listening(self):
         self.listening = False
