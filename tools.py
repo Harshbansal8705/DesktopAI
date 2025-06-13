@@ -113,14 +113,16 @@ def get_screenshot() -> str:
     return "tool_message:get_screenshot:screenshot.png"
 
 
-@tool
+@tool(return_direct=True)
 def exit_assistant() -> str:
     """
     Exit / Stop / Shutdown
     """
     if _stop_assistant:
-        _stop_assistant()
-        return "Assistant stopped."
+        # Schedule the shutdown to happen after the response is returned
+        import threading
+        threading.Timer(0.1, _stop_assistant).start()
     else:
         logger.warning("[exit] No stop callback registered.")
-        return "No stop callback registered."
+        response = "No stop callback registered."
+    return "Assistant stopped."
