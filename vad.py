@@ -4,6 +4,8 @@ import pvporcupine
 import struct
 import sounddevice as sd
 import time
+import soundfile as sf
+import os
 
 torch.set_num_threads(1)
 import collections, os, threading
@@ -30,11 +32,15 @@ class VoiceActivityDetector:
         self.tts_player = tts_player
         self.overlay = overlay
 
+        # Load sound effects
+        self.start_sound, self.start_sr = sf.read("data/soundeffects/start_recording.mp3")
+        self.stop_sound, self.stop_sr = sf.read("data/soundeffects/stop_recording.mp3")
+
         # Initialize Porcupine
         self.porcupine = pvporcupine.create(
             access_key=os.environ.get("PORCUPINE_ACCESS_KEY"),
             keyword_paths=["wakewordmodels/Jarvis_en_linux_v3_0_0.ppn"],
-            sensitivities=[0.95]
+            sensitivities=[0.9]
         )
 
         # Initialize audio stream
@@ -45,6 +51,14 @@ class VoiceActivityDetector:
             blocksize=self.num_samples
         )
         self.stream.start()
+
+        # Initialize audio output stream
+        self.output_stream = sd.OutputStream(
+            samplerate=44100,
+            channels=1,
+            dtype='float32'
+        )
+        self.output_stream.start()
 
         calibration_frames = 30  # ~1.0 second
         calibration_confidences = []
@@ -74,9 +88,13 @@ class VoiceActivityDetector:
 
     def record_audio(self, frames=[]):
         with self.lock:
-            self.overlay.put_message("status", "Listening...", "skyblue")
+            if self.overlay:
+                self.overlay.put_message("status", "Listening...", "skyblue")
             self.recording = True
             logger.debug("Recording started...")
+            # Play start sound effect
+            self.play_sound(self.start_sound, self.start_sr)
+
             silence_frames = 0
             max_silence_frames = 60  # Stop recording after ~2 seconds of silence
 
@@ -96,7 +114,11 @@ class VoiceActivityDetector:
             audio_data = np.concatenate(frames[:-60])
             self.recording = False
             logger.debug("Recording stopped...")
-            self.overlay.put_message("status", "Active", "green")
+            # Play stop sound effect
+            self.play_sound(self.stop_sound, self.stop_sr)
+
+            if self.overlay:
+                self.overlay.put_message("status", "Active", "green")
             return audio_data
 
     def on_speech(self, func):
@@ -143,6 +165,18 @@ class VoiceActivityDetector:
         if hasattr(self, 'stream'):
             self.stream.stop()
             self.stream.close()
+        if hasattr(self, 'output_stream'):
+            self.output_stream.stop()
+            self.output_stream.close()
+
+    def play_sound(self, sound_data, sample_rate):
+        # Stop any currently playing sound
+        self.output_stream.stop()
+        self.output_stream.start()
+        # Convert sound data to float32 before playing
+        sound_data = sound_data.astype('float32')
+        # Play the new sound
+        self.output_stream.write(sound_data)
 
     def play_audio(self, audio_data):
         duration_seconds = len(audio_data) / self.SAMPLE_RATE
