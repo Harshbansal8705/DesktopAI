@@ -16,7 +16,7 @@ class BackgroundAssistant:
         self.lock = threading.Lock()  # prevent multiple calls simultaneously
         self.speech = TTSPlayer()
         self.speech.start()
-        self.vad = VoiceActivityDetector()
+        self.vad = VoiceActivityDetector(tts_player=self.speech, overlay=overlay)
         self.groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
         overlay.start()
@@ -24,6 +24,7 @@ class BackgroundAssistant:
     def process_audio(self, audio):
         with self.lock:
             logger.info("Processing audio...")
+            overlay.put_message("status", "Analyzing voice...", "gold")
             temp_file = "temp.wav"
             try:
                 # Convert audio bytes to numpy array and save as WAV
@@ -38,16 +39,7 @@ class BackgroundAssistant:
                         prompt="Please transcribe the following audio accurately, maintaining proper punctuation and formatting. If you think there is no speech, return empty string."
                     )
                     logger.info(f"Transcription: {transcription}")
-
-                    # Wake word detection: find 'jarvis' anywhere
-                    lower_text = transcription.lower()
-                    if "jarvis" in lower_text:
-                        # Strip everything before 'jarvis'
-                        index = lower_text.find("jarvis")
-                        query = transcription[index + len("jarvis"):].strip()
-                        self.process_query(query)
-                    else:
-                        logger.debug("🙉 Wake word not detected. Ignoring...")
+                    self.process_query(transcription)
             except Exception as e:
                 logger.error(f"Error processing audio: {e}")
             finally:
@@ -70,11 +62,12 @@ class BackgroundAssistant:
 
         logger.info(f"Agent response: {res_msg}")
         overlay.put_message("response", res_msg)
+        overlay.put_message("status", "Active", "green")
         self.speech.speak(res_msg)
 
     def start(self):
         logger.info("🔊 Jarvis is listening in the background... Say something!")
-        overlay.put_message("status", "Listening...", "skyblue")
+        overlay.put_message("status", "Active", "green")
         executor.submit(self.vad.on_speech, self.process_audio)
 
     def shutdown(self):
