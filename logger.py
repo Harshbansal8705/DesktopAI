@@ -22,11 +22,16 @@ class ColoredFormatter(logging.Formatter):
 
 def setup_logger(name: str, log_file: str, level=logging.INFO):
     formatter = ColoredFormatter(
-        "[%(asctime)s] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+        "[%(asctime)s] %(levelname)s [%(filename)s]: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
     )
 
+    # Individual log file handler
     handler = logging.FileHandler(log_file, encoding="utf-8")
     handler.setFormatter(formatter)
+
+    # Global log file handler
+    global_handler = logging.FileHandler("logs/global.log", encoding="utf-8")
+    global_handler.setFormatter(formatter)
 
     console = logging.StreamHandler()
     console.setFormatter(formatter)
@@ -34,6 +39,7 @@ def setup_logger(name: str, log_file: str, level=logging.INFO):
     logger = logging.getLogger(name)
     logger.setLevel(level)
     logger.addHandler(handler)
+    logger.addHandler(global_handler)
     logger.addHandler(console)
     logger.propagate = False
 
