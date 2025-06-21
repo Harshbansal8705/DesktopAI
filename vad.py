@@ -61,19 +61,7 @@ class VoiceActivityDetector:
         )
         self.output_stream.start()
 
-        calibration_frames = 30  # ~1.0 second
-        calibration_confidences = []
-
-        logger.info("🤫 Calibrating... stay silent for 1 second")
-        for _ in range(calibration_frames):
-            audio_chunk, _ = self.stream.read(self.num_samples)
-            audio_float32 = self.int2float(audio_chunk)
-            confidence = model(torch.from_numpy(audio_float32), self.SAMPLE_RATE).item()
-            calibration_confidences.append(confidence)
-
-        mean_noise_conf = np.mean(calibration_confidences)
-        max_noise_conf = np.max(calibration_confidences)
-        self.threshold = 0.7 * mean_noise_conf + 0.3 * max_noise_conf + 0.05
+        self.confidence_threshold = 0.5
 
         self.voice_encoder = VoiceEncoder()
         self.OWNER_VOICE_FILE = "data/owner.wav"
@@ -88,11 +76,6 @@ class VoiceActivityDetector:
                 "Run `python setup/record_owner_voice.py` to record your voice."
             )
             exit(1)
-
-        logger.info("✅ Calibration done.")
-        logger.info(f"→ Mean noise confidence: {mean_noise_conf:.3f}")
-        logger.info(f"→ Max noise confidence: {max_noise_conf:.3f}")
-        logger.info(f"→ Adaptive threshold set to: {self.threshold:.3f}\n")
 
     def int2float(self, sound):
         abs_max = np.abs(sound).max()
@@ -112,15 +95,16 @@ class VoiceActivityDetector:
 
             silence_frames = 0
             max_silence_frames = 60  # Stop recording after ~2 seconds of silence
+            max_recording_frames = int(20 * self.SAMPLE_RATE / self.num_samples)
 
-            while silence_frames < max_silence_frames:
+            while silence_frames < max_silence_frames and len(frames) < max_recording_frames:
                 audio_chunk, _ = self.stream.read(self.num_samples)
                 audio_float32 = self.int2float(audio_chunk)
                 frames.append(audio_chunk)
 
                 confidence = model(torch.from_numpy(audio_float32), self.SAMPLE_RATE).item()
 
-                if confidence > self.threshold:
+                if confidence > self.confidence_threshold:
                     silence_frames = 0
                 else:
                     silence_frames += 1
@@ -172,7 +156,7 @@ class VoiceActivityDetector:
                     continue  # Skip further processing
 
                 logger.info("✅ Speaker verified as owner")
-            
+
             # Stop TTS playback if available
             if self.tts_player:
                 self.tts_player.stop_current()
