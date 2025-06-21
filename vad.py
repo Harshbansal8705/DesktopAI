@@ -83,7 +83,10 @@ class VoiceActivityDetector:
             self.owner_embeddings = self.voice_encoder.embed_utterance(preprocess_wav(self.OWNER_VOICE_FILE))
             logger.info("✅ Owner voice file found. Loading embeddings...")
         else:
-            logger.error("Owner voice file not found. Please record your voice and save it in data/owner.wav")
+            logger.error(
+                "Owner voice file not found. Please record your voice and save it in data/owner.wav\n"
+                "Run `python setup/record_owner_voice.py` to record your voice."
+            )
             exit(1)
 
         logger.info("✅ Calibration done.")
