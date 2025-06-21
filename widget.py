@@ -193,7 +193,6 @@ class TransparentOverlayQt(QMainWindow):
                     status, color = args
                     self.status_indicator.setStyleSheet(f"color: {color};")
                     self.status_text.setText(status)
-                    self.add_log_message(f"[Status] {status}", color)
 
                 elif msg_type == "query":
                     text = args[0]
