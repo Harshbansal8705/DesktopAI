@@ -6,6 +6,7 @@ import sounddevice as sd
 import time
 import soundfile as sf
 import os
+from resemblyzer import VoiceEncoder, preprocess_wav
 
 torch.set_num_threads(1)
 import collections, os, threading
@@ -40,7 +41,7 @@ class VoiceActivityDetector:
         self.porcupine = pvporcupine.create(
             access_key=os.environ.get("PORCUPINE_ACCESS_KEY"),
             keyword_paths=["wakewordmodels/Jarvis_en_linux_v3_0_0.ppn"],
-            sensitivities=[0.9]
+            sensitivities=[0.95]
         )
 
         # Initialize audio stream
@@ -73,6 +74,17 @@ class VoiceActivityDetector:
         mean_noise_conf = np.mean(calibration_confidences)
         max_noise_conf = np.max(calibration_confidences)
         self.threshold = 0.7 * mean_noise_conf + 0.3 * max_noise_conf + 0.05
+
+        self.voice_encoder = VoiceEncoder()
+        self.OWNER_VOICE_FILE = "data/owner.wav"
+        self.owner_embeddings = None
+
+        if os.path.exists(self.OWNER_VOICE_FILE):
+            self.owner_embeddings = self.voice_encoder.embed_utterance(preprocess_wav(self.OWNER_VOICE_FILE))
+            logger.info("✅ Owner voice file found. Loading embeddings...")
+        else:
+            logger.error("Owner voice file not found. Please record your voice and save it in data/owner.wav")
+            exit(1)
 
         logger.info("✅ Calibration done.")
         logger.info(f"→ Mean noise confidence: {mean_noise_conf:.3f}")
@@ -123,7 +135,8 @@ class VoiceActivityDetector:
 
     def on_speech(self, func):
         self.listening = True
-        frame_queue = collections.deque(maxlen=60)
+        frame_queue = collections.deque(maxlen=60)  # for audio_chunk frames (int16)
+        float_queue = collections.deque(maxlen=60)  # for speaker verification (float32)
 
         while self.listening:
             if self.recording:
@@ -131,9 +144,11 @@ class VoiceActivityDetector:
                 continue
 
             audio_chunk, _ = self.stream.read(self.num_samples)
+            audio_float = self.int2float(audio_chunk)
 
             # Add current frame to queue
             frame_queue.append(audio_chunk)
+            float_queue.append(audio_float)
 
             # Check for wake word if not already recording
             pcm = struct.unpack_from("h" * self.porcupine.frame_length, audio_chunk.tobytes())
@@ -141,6 +156,19 @@ class VoiceActivityDetector:
             if keyword_index == -1:
                 continue
             logger.debug("🎯 Wake word detected!")
+
+            # === Speaker verification before continuing ===
+            if self.owner_embeddings is not None:
+                float_buffer = np.concatenate(list(float_queue))  # ~1s of audio
+                predicted_embedding = self.voice_encoder.embed_utterance(float_buffer)
+                similarity = np.dot(self.owner_embeddings, predicted_embedding)
+
+                logger.debug(f"🔍 Speaker similarity: {similarity:.3f}")
+                if similarity < 0.6:
+                    logger.warning("🚫 Voice does not match owner. Ignoring wake word.")
+                    continue  # Skip further processing
+
+                logger.info("✅ Speaker verified as owner")
             
             # Stop TTS playback if available
             if self.tts_player:

@@ -36,7 +36,7 @@ class BackgroundAssistant:
                         file=("temp.wav", f.read()),
                         model="distil-whisper-large-v3-en",
                         response_format="text",
-                        prompt="Please transcribe the following audio accurately, maintaining proper punctuation and formatting. If you think there is no speech, return empty string."
+                        prompt="Please transcribe the following audio accurately, maintaining proper punctuation and formatting. This is a conversation between a user and a Desktop Assistant named \"Jarvis\". So, focus on words like 'Jarvis'."
                     )
                     logger.info(f"Transcription: {transcription}")
                     self.process_query(transcription)
@@ -48,12 +48,6 @@ class BackgroundAssistant:
 
     def process_query(self, query: str):
         overlay.put_message("query", query)
-        if query.lower() in ["exit", "quit"]:
-            self.shutdown()
-
-        if not query:
-            logger.debug("😶 You addressed Jarvis, but gave no command.")
-            return
 
         logger.debug(f"Invoking agent with: {query}")
         overlay.put_message("status", "Processing...", "gold")
