@@ -18,6 +18,7 @@ class BackgroundAssistant:
         self.speech.start()
         self.vad = VoiceActivityDetector(tts_player=self.speech, overlay=overlay)
         self.groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+        overlay.on_new_message = self.process_query
 
         overlay.start()
 

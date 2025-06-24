@@ -14,10 +14,13 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QScrollArea,
     QFrame,
+    QLineEdit,
+    QToolButton,
 )
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, QSize
 from PyQt5.QtGui import QFont
 from queue import Queue
+from thread_executor import executor
 
 from logger import setup_logger
 
@@ -40,6 +43,7 @@ class TransparentOverlayQt(QMainWindow):
         self.exit_callback = exit_callback
         self.message_queue = Queue()
         self.running = True
+        self.on_new_message = None
 
         # Set up the UI
         self.setup_ui()
@@ -67,7 +71,7 @@ class TransparentOverlayQt(QMainWindow):
         main_layout = QVBoxLayout(central_widget)
 
         # Status indicator
-        status_layout = QHBoxLayout()
+        top_layout = QHBoxLayout()
         self.status_indicator = QLabel("●")
         self.status_indicator.setFont(QFont("Arial", 10))
         self.status_indicator.setStyleSheet("color: gray;")
@@ -76,10 +80,17 @@ class TransparentOverlayQt(QMainWindow):
         self.status_text.setFont(QFont("Arial", 10))
         self.status_text.setStyleSheet("color: white;")
 
-        status_layout.addWidget(self.status_indicator)
-        status_layout.addWidget(self.status_text)
-        status_layout.addStretch()
-        main_layout.addLayout(status_layout)
+        top_layout.addWidget(self.status_indicator)
+        top_layout.addWidget(self.status_text)
+        top_layout.addStretch()
+        # Minimize button as icon at right of status bar
+        self.minimize_btn = QToolButton()
+        self.minimize_btn.setIcon(self.style().standardIcon(self.style().SP_TitleBarMinButton))
+        self.minimize_btn.setIconSize(QSize(16, 16))
+        self.minimize_btn.setStyleSheet("background: transparent; border: none; margin: 2px;")
+        self.minimize_btn.clicked.connect(self.hide)
+        top_layout.addWidget(self.minimize_btn)
+        main_layout.addLayout(top_layout)
 
         # Separator
         separator = QFrame()
@@ -101,20 +112,19 @@ class TransparentOverlayQt(QMainWindow):
         # Control bar
         control_layout = QHBoxLayout()
 
-        # Drag handle
-        self.drag_handle = QLabel("Jarvis Overlay")
-        self.drag_handle.setStyleSheet(
+        # Input box and send button
+        self.input_box = QLineEdit()
+        self.input_box.setPlaceholderText("Type your message...")
+        self.input_box.setStyleSheet(
             """
-            background-color: #333333;
+            background-color: #222222;
             color: white;
             padding: 5px;
             border-radius: 5px;
         """
         )
-
-        # Minimize button
-        self.minimize_btn = QPushButton("Minimize")
-        self.minimize_btn.setStyleSheet(
+        self.send_btn = QPushButton("Send")
+        self.send_btn.setStyleSheet(
             """
             background-color: #333333;
             color: white;
@@ -123,10 +133,11 @@ class TransparentOverlayQt(QMainWindow):
             border-radius: 5px;
         """
         )
-        self.minimize_btn.clicked.connect(self.hide)
+        self.send_btn.clicked.connect(self.send_message)
+        self.input_box.returnPressed.connect(self.send_message)
 
-        control_layout.addWidget(self.drag_handle, 1)
-        control_layout.addWidget(self.minimize_btn)
+        control_layout.addWidget(self.input_box, 1)
+        control_layout.addWidget(self.send_btn)
         main_layout.addLayout(control_layout)
 
         # Set the central widget
@@ -213,6 +224,13 @@ class TransparentOverlayQt(QMainWindow):
         """Shut down the overlay."""
         self.running = False
         self.close()
+
+    def send_message(self):
+        message = self.input_box.text().strip()
+        self.input_box.clear()
+        if message:
+            if self.on_new_message:
+                executor.submit(self.on_new_message, message)
 
 
 app = QApplication(sys.argv)
