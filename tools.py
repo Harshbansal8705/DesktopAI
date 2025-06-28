@@ -75,21 +75,21 @@ def open_whatsapp_web() -> str:
 
 
 @tool
-def show_logs_widget() -> str:
+def show_popup_widget() -> str:
     """
-    Show the logs widget
+    Show the popup widget
     """
     overlay.show()
-    return "Logs widget opened."
+    return "Popup widget opened."
 
 
 @tool
-def hide_logs_widget() -> str:
+def hide_popup_widget() -> str:
     """
-    Hide the logs widget
+    Hide the popup widget
     """
     overlay.hide()
-    return "Logs widget closed."
+    return "Popup widget closed."
 
 
 @tool
