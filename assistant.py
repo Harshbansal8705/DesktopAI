@@ -1,6 +1,5 @@
 # assistant.py
 import base64
-from dotenv import load_dotenv
 from generate_prompt import prompt
 from langgraph.prebuilt import create_react_agent
 from langgraph.prebuilt.chat_agent_executor import AgentState
@@ -18,13 +17,12 @@ from tools import (
     do_nothing,
 )
 from langgraph.checkpoint.sqlite import SqliteSaver
-import os, sqlite3
+import sqlite3
+from config import config
 
-load_dotenv()
+logger = setup_logger("assistant", "logs/assistant.log", level=config.LOG_LEVEL)
 
-logger = setup_logger("assistant", "logs/assistant.log", level=os.environ["LOG_LEVEL"])
-
-conn = sqlite3.connect("checkpoints/sqlite.db", check_same_thread=False)
+conn = sqlite3.connect(config.CHECKPOINTS_DB, check_same_thread=False)
 checkpointer = SqliteSaver(conn)
 
 
@@ -56,10 +54,10 @@ logger.info("Agent initialized.")
 
 
 def call_agent(message):
-    config = {"configurable": {"thread_id": "4"}}
+    config_dict = {"configurable": {"thread_id": config.THREAD_ID}}
     response = agent.invoke(
         {"messages": [message]},
-        config=config,
+        config_dict,
     )
     msg = response["messages"][-1].content
 
@@ -89,7 +87,7 @@ def call_agent(message):
                         }
                     ]
                 },
-                config=config,
+                config=config_dict,
             )
 
             msg = response["messages"][-1].content

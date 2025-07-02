@@ -23,8 +23,9 @@ from queue import Queue
 from thread_executor import executor
 
 from logger import setup_logger
+from config import config
 
-logger = setup_logger("widget", "logs/widget.log", level=os.environ["LOG_LEVEL"])
+logger = setup_logger("widget", "logs/widget.log", level=config.LOG_LEVEL)
 
 
 class TransparentOverlayQt(QMainWindow):
@@ -54,7 +55,7 @@ class TransparentOverlayQt(QMainWindow):
         self.setWindowTitle("Jarvis Assistant")
         self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setGeometry(50, 50, 400, 200)
+        self.setGeometry(config.OVERLAY_X, config.OVERLAY_Y, config.OVERLAY_WIDTH, config.OVERLAY_HEIGHT)
 
         # Create central widget
         central_widget = QWidget()
@@ -246,7 +247,6 @@ def main():
     QTimer.singleShot(
         2000, lambda: overlay.add_log_message("Jarvis, what's the weather today?")
     )
-    QTimer.singleShot(3000, lambda: app.closeAllWindows())
     QTimer.singleShot(3000, lambda: overlay.update_status("Processing", "yellow"))
     QTimer.singleShot(4000, lambda: overlay.update_status("Responding", "lightgreen"))
     QTimer.singleShot(

@@ -7,14 +7,13 @@ from typing import Any, List
 
 from logger import setup_logger
 from summarizer import summarize_conversation
-
-import os
+from config import config
 
 logger = setup_logger(
-    "generate_prompt", "logs/generate_prompt.log", level=os.environ["LOG_LEVEL"]
+    "generate_prompt", "logs/generate_prompt.log", level=config.LOG_LEVEL
 )
 
-MAX_TOKENS_HISTORY = 10000
+MAX_TOKENS_HISTORY = config.MAX_TOKENS_HISTORY
 
 
 def prompt(state: AgentState, config: RunnableConfig) -> List[Any]:

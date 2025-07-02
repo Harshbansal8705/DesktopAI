@@ -1,9 +1,10 @@
 import asyncio, edge_tts, os, pyaudio, threading, queue, tempfile
 from logger import setup_logger
 from pydub import AudioSegment
+from config import config
 
 logger = setup_logger(
-    "speech_manager", "logs/speech_manager.log", level=os.environ["LOG_LEVEL"]
+    "speech_manager", "logs/speech_manager.log", level=config.LOG_LEVEL
 )
 
 
@@ -30,7 +31,7 @@ class TTSPlayer(threading.Thread):
     async def synthesize_to_file(self, text: str, filename: str):
         try:
             communicate = edge_tts.Communicate(
-                text=text, voice="en-US-RogerNeural", rate="+30%"
+                text=text, voice=config.TTS_VOICE, rate=config.TTS_RATE
             )
             with open(filename, "wb") as f:
                 async for chunk in communicate.stream():
@@ -57,7 +58,7 @@ class TTSPlayer(threading.Thread):
                           rate=audio_segment.frame_rate,
                           output=True)
 
-            chunk_size = 1024
+            chunk_size = config.TTS_CHUNK_SIZE
             audio_data = audio_segment.raw_data
 
             for i in range(0, len(audio_data), chunk_size):

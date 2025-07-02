@@ -4,6 +4,7 @@ from langchain_core.tools import tool
 from logger import setup_logger
 from widget import overlay
 from PIL import ImageGrab
+from config import config
 
 logger = setup_logger("tools", "logs/tools.log", level=os.environ["LOG_LEVEL"])
 
@@ -108,9 +109,9 @@ def get_screenshot() -> str:
     """
     logger.info("[get_screenshot] Taking screenshot...")
     screenshot = ImageGrab.grab()
-    screenshot.save("screenshot.png")
+    screenshot.save(config.SCREENSHOT_FILE)
 
-    return "tool_message:get_screenshot:screenshot.png"
+    return f"tool_message:get_screenshot:{config.SCREENSHOT_FILE}"
 
 
 @tool(return_direct=True)

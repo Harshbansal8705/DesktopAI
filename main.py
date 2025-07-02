@@ -1,11 +1,13 @@
 import os, sys, threading, soundfile as sf, numpy as np
 from assistant import call_agent
+from audio_processor import AudioProcessor
 from logger import setup_logger
 from ttsplayer import TTSPlayer
 from widget import app, overlay
 from vad import VoiceActivityDetector
 from groq import Groq
 from tools import register_stop_assistant
+from config import config
 from thread_executor import executor
 
 logger = setup_logger("main", "logs/main.log", level=os.environ["LOG_LEVEL"])
@@ -16,36 +18,18 @@ class BackgroundAssistant:
         self.lock = threading.Lock()  # prevent multiple calls simultaneously
         self.speech = TTSPlayer()
         self.speech.start()
+        # Initialize audio processor and VAD
+        self.audio_processor = AudioProcessor()
         self.vad = VoiceActivityDetector(tts_player=self.speech, overlay=overlay)
-        self.groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
         overlay.on_new_message = self.process_query
-
         overlay.start()
 
     def process_audio(self, audio):
         with self.lock:
             logger.info("Processing audio...")
             overlay.put_message("status", "Analyzing voice...", "gold")
-            temp_file = "temp.wav"
-            try:
-                # Convert audio bytes to numpy array and save as WAV
-                audio_array = np.frombuffer(audio, dtype=np.int16)
-                sf.write(temp_file, audio_array, 16000)  # 16000 is the sample rate
-
-                with open(temp_file, "rb") as f:
-                    transcription = self.groq_client.audio.transcriptions.create(
-                        file=("temp.wav", f.read()),
-                        model="distil-whisper-large-v3-en",
-                        response_format="text",
-                        prompt="Please transcribe the following audio accurately, maintaining proper punctuation and formatting. This is a conversation between a user and a Desktop Assistant named \"Jarvis\". So, focus on words like 'Jarvis'."
-                    )
-                    logger.info(f"Transcription: {transcription}")
-                    self.process_query(transcription)
-            except Exception as e:
-                logger.error(f"Error processing audio: {e}")
-            finally:
-                if os.path.exists(temp_file):
-                    os.remove(temp_file)
+            transcription = self.audio_processor.process_audio(audio)
+            self.process_query(transcription)
 
     def process_query(self, query: str):
         overlay.put_message("query", query)

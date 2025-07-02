@@ -12,21 +12,22 @@ torch.set_num_threads(1)
 import collections, os, threading
 from logger import setup_logger
 from thread_executor import executor
+from config import config
 
 model, utils = torch.hub.load(repo_or_dir="snakers4/silero-vad", model="silero_vad")
 
 (get_speech_timestamps, save_audio, read_audio, VADIterator, collect_chunks) = utils
 
-logger = setup_logger("vad", "logs/vad.log", level=os.environ["LOG_LEVEL"])
+logger = setup_logger("vad", "logs/vad.log", level=config.LOG_LEVEL)
 
 
 class VoiceActivityDetector:
     def __init__(self, tts_player=None, overlay=None):
         # Audio config
-        self.SAMPLE_RATE = 16000
-        self.CHANNELS = 1
-        self.CHUNK = int(self.SAMPLE_RATE / 10)
-        self.num_samples = 512
+        self.SAMPLE_RATE = config.SAMPLE_RATE
+        self.CHANNELS = config.CHANNELS
+        self.CHUNK = config.CHUNK_SIZE
+        self.num_samples = config.NUM_SAMPLES
         self.recording = False
         self.listening = False
         self.lock = threading.Lock()
@@ -34,13 +35,13 @@ class VoiceActivityDetector:
         self.overlay = overlay
 
         # Load sound effects
-        self.start_sound, self.start_sr = sf.read("data/soundeffects/start_recording.mp3")
-        self.stop_sound, self.stop_sr = sf.read("data/soundeffects/stop_recording.mp3")
+        self.start_sound, self.start_sr = sf.read(config.START_SOUND_FILE)
+        self.stop_sound, self.stop_sr = sf.read(config.STOP_SOUND_FILE)
 
         # Initialize Porcupine
         self.porcupine = pvporcupine.create(
-            access_key=os.environ.get("PORCUPINE_ACCESS_KEY"),
-            keyword_paths=["wakewordmodels/Jarvis_en_linux_v3_0_0.ppn"],
+            access_key=config.PORCUPINE_ACCESS_KEY,
+            keyword_paths=[config.WAKE_WORD_MODEL],
             sensitivities=[0.95]
         )
 
@@ -61,10 +62,10 @@ class VoiceActivityDetector:
         )
         self.output_stream.start()
 
-        self.confidence_threshold = 0.5
+        self.confidence_threshold = config.CONFIDENCE_THRESHOLD
 
         self.voice_encoder = VoiceEncoder()
-        self.OWNER_VOICE_FILE = "data/owner.wav"
+        self.OWNER_VOICE_FILE = config.OWNER_VOICE_FILE
         self.owner_embeddings = None
 
         if os.path.exists(self.OWNER_VOICE_FILE):
@@ -94,8 +95,8 @@ class VoiceActivityDetector:
             self.play_sound(self.start_sound, self.start_sr)
 
             silence_frames = 0
-            max_silence_frames = 60  # Stop recording after ~2 seconds of silence
-            max_recording_frames = int(20 * self.SAMPLE_RATE / self.num_samples)
+            max_silence_frames = config.MAX_SILENCE_FRAMES
+            max_recording_frames = config.MAX_RECORDING_FRAMES
 
             while silence_frames < max_silence_frames and len(frames) < max_recording_frames:
                 audio_chunk, _ = self.stream.read(self.num_samples)
@@ -151,7 +152,7 @@ class VoiceActivityDetector:
                 similarity = np.dot(self.owner_embeddings, predicted_embedding)
 
                 logger.debug(f"🔍 Speaker similarity: {similarity:.3f}")
-                if similarity < 0.6:
+                if similarity < config.SPEAKER_SIMILARITY_THRESHOLD:
                     logger.warning("🚫 Voice does not match owner. Ignoring wake word.")
                     continue  # Skip further processing
 
@@ -167,7 +168,7 @@ class VoiceActivityDetector:
             # Process in a separate thread to avoid blocking the main loop
             future = executor.submit(func, audio_data)
             try:
-                future.result(timeout=10)
+                future.result(timeout=config.AUDIO_PROCESSING_TIMEOUT)
             except Exception as e:
                 logger.error(f"Error processing audio: {e}")
 
