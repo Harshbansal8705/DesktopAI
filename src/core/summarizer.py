@@ -1,7 +1,7 @@
 from langchain_core.messages import HumanMessage
 from langgraph.prebuilt.chat_agent_executor import AgentState
 from langchain_core.messages.utils import count_tokens_approximately, trim_messages
-from llm import model
+from src.core.llm import model
 
 
 def summarize_conversation(state: AgentState, max_tokens: int = 1000):

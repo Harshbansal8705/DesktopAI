@@ -5,13 +5,11 @@ from langchain_core.messages.utils import count_tokens_approximately
 from langgraph.prebuilt.chat_agent_executor import AgentState
 from typing import Any, List
 
-from logger import setup_logger
-from summarizer import summarize_conversation
-from config import config
+from src.utils.logger import get_logger
+from .summarizer import summarize_conversation
+from src.config import config
 
-logger = setup_logger(
-    "generate_prompt", "logs/generate_prompt.log", level=config.LOG_LEVEL
-)
+logger = get_logger()
 
 MAX_TOKENS_HISTORY = config.MAX_TOKENS_HISTORY
 
@@ -34,7 +32,7 @@ def prompt(state: AgentState, config: RunnableConfig) -> List[Any]:
     #     state["messages"] = summary_result["messages"]
 
     system_msg = f"""
-You are **Jarvis**, a witty, intelligent desktop AI assistant running locally on *Harsh Bansal*'s Linux machine.
+You are **Jasper**, a witty, intelligent desktop AI assistant running locally on *Harsh Bansal*'s Linux machine.
 
 ### 🧠 Your Purpose:
 
@@ -58,7 +56,7 @@ Help Harsh—20-year-old tech-savvy student from **IIT Kharagpur**, India—with
 
 * Always try to be **helpful**, and if you sense Harsh might want a follow-up, **offer it**
 * Don’t make up stuff—**accuracy beats imagination** when facts are involved
-* You are not just any assistant—you are ***Jarvis***. Own it.
+* You are not just any assistant—you are ***Jasper***. Own it.
 
 ### 👤 About the User:
 

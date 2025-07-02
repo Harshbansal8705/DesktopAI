@@ -1,12 +1,12 @@
 # assistant.py
 import base64
-from generate_prompt import prompt
+from .generate_prompt import prompt
 from langgraph.prebuilt import create_react_agent
 from langgraph.prebuilt.chat_agent_executor import AgentState
 from langchain_core.messages import HumanMessage
-from llm import model
-from logger import setup_logger
-from tools import (
+from src.core.llm import model
+from src.utils.logger import get_logger
+from .tools import (
     run_command,
     open_google_chrome,
     open_whatsapp_web,
@@ -18,9 +18,9 @@ from tools import (
 )
 from langgraph.checkpoint.sqlite import SqliteSaver
 import sqlite3
-from config import config
+from src.config import config
 
-logger = setup_logger("assistant", "logs/assistant.log", level=config.LOG_LEVEL)
+logger = get_logger()
 
 conn = sqlite3.connect(config.CHECKPOINTS_DB, check_same_thread=False)
 checkpointer = SqliteSaver(conn)
@@ -31,7 +31,6 @@ class State(AgentState):
 
 
 logger.info("Chat model initialized.")
-
 
 agent = create_react_agent(
     model=model,

@@ -1,12 +1,12 @@
 # tools.py
 import os, subprocess
 from langchain_core.tools import tool
-from logger import setup_logger
-from widget import overlay
+from src.utils.logger import get_logger
+from src.ui.overlay import overlay
 from PIL import ImageGrab
-from config import config
+from src.config import config
 
-logger = setup_logger("tools", "logs/tools.log", level=os.environ["LOG_LEVEL"])
+logger = get_logger()
 
 _stop_assistant = False
 

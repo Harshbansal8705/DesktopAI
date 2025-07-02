@@ -1,13 +1,13 @@
 import sounddevice as sd
 import soundfile as sf
 import time, os
-from logger import setup_logger
-from config import config
+from src.utils.logger import get_logger
+from src.config import config
 
 SAMPLE_RATE = config.SAMPLE_RATE
 OWNER_FILE = config.OWNER_VOICE_FILE
 
-logger = setup_logger("record_owner_voice", "logs/record_owner_voice.log", level=config.LOG_LEVEL)
+logger = get_logger()
 
 
 def main():

@@ -1,11 +1,9 @@
 import asyncio, edge_tts, os, pyaudio, threading, queue, tempfile
-from logger import setup_logger
+from src.utils.logger import get_logger
 from pydub import AudioSegment
-from config import config
+from src.config import config
 
-logger = setup_logger(
-    "speech_manager", "logs/speech_manager.log", level=config.LOG_LEVEL
-)
+logger = get_logger()
 
 
 class TTSPlayer(threading.Thread):
@@ -53,10 +51,12 @@ class TTSPlayer(threading.Thread):
         stream = None
         try:
             p = pyaudio.PyAudio()
-            stream = p.open(format=p.get_format_from_width(audio_segment.sample_width),
-                          channels=audio_segment.channels,
-                          rate=audio_segment.frame_rate,
-                          output=True)
+            stream = p.open(
+                format=p.get_format_from_width(audio_segment.sample_width),
+                channels=audio_segment.channels,
+                rate=audio_segment.frame_rate,
+                output=True,
+            )
 
             chunk_size = config.TTS_CHUNK_SIZE
             audio_data = audio_segment.raw_data
@@ -64,7 +64,7 @@ class TTSPlayer(threading.Thread):
             for i in range(0, len(audio_data), chunk_size):
                 if self.stop_event.is_set() or self.current_playback_event.is_set():
                     break
-                stream.write(audio_data[i:i + chunk_size])
+                stream.write(audio_data[i : i + chunk_size])
         except Exception as e:
             logger.error(f"Audio playback error: {e}")
         finally:
@@ -78,7 +78,7 @@ class TTSPlayer(threading.Thread):
         if not text or not text.strip():
             logger.warning("Empty text passed to speech engine")
             return
-            
+
         logger.debug(f"🔈 Speaking: {text}")
         try:
             with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmpfile:
@@ -95,9 +95,9 @@ class TTSPlayer(threading.Thread):
     def speak(self, text):
         if not text:
             return
-            
+
         self.stop_current()  # Interrupt current playback
-        
+
         # Clear queue and add new text
         with self.lock:
             while not self.tts_queue.empty():

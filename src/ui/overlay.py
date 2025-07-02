@@ -20,12 +20,12 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QTimer, QSize
 from PyQt5.QtGui import QFont
 from queue import Queue
-from thread_executor import executor
+from src.utils.thread_executor import executor
 
-from logger import setup_logger
-from config import config
+from src.utils.logger import get_logger
+from src.config import config
 
-logger = setup_logger("widget", "logs/widget.log", level=config.LOG_LEVEL)
+logger = get_logger()
 
 
 class TransparentOverlayQt(QMainWindow):
@@ -52,7 +52,7 @@ class TransparentOverlayQt(QMainWindow):
     def setup_ui(self):
         """Set up the user interface."""
         # Main window configuration
-        self.setWindowTitle("Jarvis Assistant")
+        self.setWindowTitle("Jasper Assistant")
         self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setGeometry(config.OVERLAY_X, config.OVERLAY_Y, config.OVERLAY_WIDTH, config.OVERLAY_HEIGHT)
@@ -212,14 +212,14 @@ class TransparentOverlayQt(QMainWindow):
 
                 elif msg_type == "response":
                     text = args[0]
-                    self.add_log_message(f"Jarvis: {text}", "#00FF00")  # Green
+                    self.add_log_message(f"Jasper: {text}", "#00FF00")  # Green
 
             except Exception as e:
                 logger.error(f"Error processing message: {e}")
 
     def start(self):
         """Start the overlay."""
-        self.update_status("Jarvis Active", "lightgreen")
+        self.update_status("Jasper Active", "lightgreen")
 
     def shutdown(self):
         """Shut down the overlay."""
@@ -245,7 +245,7 @@ def main():
     # Demo updating
     QTimer.singleShot(1000, lambda: overlay.update_status("Listening", "lightblue"))
     QTimer.singleShot(
-        2000, lambda: overlay.add_log_message("Jarvis, what's the weather today?")
+        2000, lambda: overlay.add_log_message("Jasper, what's the weather today?")
     )
     QTimer.singleShot(3000, lambda: overlay.update_status("Processing", "yellow"))
     QTimer.singleShot(4000, lambda: overlay.update_status("Responding", "lightgreen"))

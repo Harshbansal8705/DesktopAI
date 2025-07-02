@@ -5,10 +5,10 @@ import os
 import numpy as np
 import soundfile as sf
 from groq import Groq
-from logger import setup_logger
-from config import config
+from src.utils.logger import get_logger
+from src.config import config
 
-logger = setup_logger("audio_processor", "logs/audio_processor.log", level=config.LOG_LEVEL)
+logger = get_logger()
 
 class AudioProcessor:
     """Handles audio transcription and processing."""

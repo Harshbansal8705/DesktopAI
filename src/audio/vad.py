@@ -10,15 +10,15 @@ from resemblyzer import VoiceEncoder, preprocess_wav
 
 torch.set_num_threads(1)
 import collections, os, threading
-from logger import setup_logger
-from thread_executor import executor
-from config import config
+from src.utils.logger import get_logger
+from src.utils.thread_executor import executor
+from src.config import config
 
 model, utils = torch.hub.load(repo_or_dir="snakers4/silero-vad", model="silero_vad")
 
 (get_speech_timestamps, save_audio, read_audio, VADIterator, collect_chunks) = utils
 
-logger = setup_logger("vad", "logs/vad.log", level=config.LOG_LEVEL)
+logger = get_logger()
 
 
 class VoiceActivityDetector:
@@ -121,7 +121,7 @@ class VoiceActivityDetector:
                 self.overlay.put_message("status", "Active", "green")
             return audio_data
 
-    def on_speech(self, func):
+    def listen(self, func):
         self.listening = True
         frame_queue = collections.deque(maxlen=60)  # for audio_chunk frames (int16)
         float_queue = collections.deque(maxlen=60)  # for speaker verification (float32)
@@ -208,4 +208,4 @@ class VoiceActivityDetector:
 if __name__ == "__main__":
     # Example usage
     vad = VoiceActivityDetector()
-    vad.on_speech(vad.play_audio)
+    vad.listen(vad.play_audio)
