@@ -14,6 +14,7 @@ class Config:
     GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
     TOGETHER_API_KEY = os.environ.get("TOGETHER_API_KEY")
     PORCUPINE_ACCESS_KEY = os.environ.get("PORCUPINE_ACCESS_KEY")
+    TAVILY_API_KEY = os.environ.get("TAVILY_API_KEY")
 
     # LLM Configuration
     LLM_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
