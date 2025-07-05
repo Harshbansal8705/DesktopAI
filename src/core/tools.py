@@ -1,10 +1,11 @@
-# tools.py
-import os, subprocess
-from langchain_core.tools import tool
+import functools, subprocess
+from typing import Literal, Optional
+from langchain_core.tools import tool as _tool
+from langchain_tavily import TavilySearch
+from src.config import config
 from src.utils.logger import get_logger
 from src.ui.overlay import overlay
 from PIL import ImageGrab
-from src.config import config
 
 logger = get_logger()
 
@@ -16,22 +17,32 @@ def register_stop_assistant(callback):
     _stop_assistant = callback
 
 
+def tool(_func=None, *, return_direct=False):
+    """
+    A Tool decorator with logging.
+    """
+    def decorator(func):
+        @_tool(return_direct=return_direct)
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            logger.info(f"[{func.__name__}] Called with args: {args}, kwargs: {kwargs}")
+            try:
+                result = func(*args, **kwargs)
+                logger.debug(f"[{func.__name__}] Result: {result}")
+                return result
+            except Exception as e:
+                logger.error(f"[{func.__name__}] Error: {e}")
+                return f"Error in {func.__name__}: {e}"
+        return wrapper
+    return decorator(_func) if _func is not None else decorator
+
+
 @tool
 def run_command(command: str) -> str:
     """Run a shell command on the local Linux machine."""
-    logger.info(f"Executing command: {command}")
-    try:
-        output = subprocess.check_output(
-            command, shell=True, stderr=subprocess.STDOUT, text=True
-        )
-        logger.debug(f"[run_command] Output:\n{output}")
-        return f"Command executed:\n{output}"
-    except subprocess.CalledProcessError as e:
-        logger.error(f"[run_command] Error:\n{e}")
-        return f"Error:\n{e}"
-    except Exception as e:
-        logger.error(f"[run_command] Unexpected error: {e}")
-        return f"Unexpected error:\n{e}"
+    return subprocess.check_output(
+        command, shell=True, stderr=subprocess.STDOUT, text=True
+    )
 
 
 @tool
@@ -125,5 +136,29 @@ def exit_assistant() -> str:
         threading.Timer(0.1, _stop_assistant).start()
     else:
         logger.warning("[exit] No stop callback registered.")
-        response = "No stop callback registered."
+        return "No stop callback registered."
     return "Assistant stopped."
+
+
+@tool
+def web_search(
+    query: str,
+    max_results: int = 5,
+    search_depth: Optional[Literal["basic", "advanced"]] = "basic"
+) -> str:
+    """
+    Execute a search query using the Tavily Search API.
+
+    Parameters:
+    - query (str): The search query to execute.
+    - max_results (int): The maximum number of results to return. Default is 5.
+    - search_depth (Optional[Literal["basic", "advanced"]]): The depth of the search.
+    Default is "basic". Use "advanced" for more detailed results.
+    """
+    search_tool = TavilySearch(api_key=config.TAVILY_API_KEY, max_results=max_results, search_depth=search_depth)
+    try:
+        results = search_tool.invoke({"query": query})
+        return str(results)
+    except Exception as e:
+        logger.error(f"[web_search] Error: {e}")
+        return f"Error during web search: {e}"

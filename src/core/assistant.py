@@ -15,6 +15,7 @@ from .tools import (
     hide_popup_widget,
     exit_assistant,
     do_nothing,
+    web_search,
 )
 from langgraph.checkpoint.sqlite import SqliteSaver
 import sqlite3
@@ -41,6 +42,7 @@ agent = create_react_agent(
         get_screenshot,
         show_popup_widget,
         hide_popup_widget,
+        web_search,
         do_nothing,
         exit_assistant,
     ],
