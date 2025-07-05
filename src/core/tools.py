@@ -6,10 +6,15 @@ from src.config import config
 from src.utils.logger import get_logger
 from src.ui.overlay import overlay
 from PIL import ImageGrab
+from adbutils import AdbClient
+from adbutils.errors import AdbTimeout
 
 logger = get_logger()
 
 _stop_assistant = False
+
+
+adb = AdbClient(host=config.ADB_HOST, port=config.ADB_PORT)
 
 
 def register_stop_assistant(callback):
@@ -36,6 +41,22 @@ def tool(_func=None, *, return_direct=False):
         return wrapper
     return decorator(_func) if _func is not None else decorator
 
+def adb_required(func):
+    """
+    A decorator to ensure ADB client is initialized before running the function.
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            adb.connect(f"{config.MOBILE_HOST}:{config.MOBILE_PORT}", timeout=5)
+        except AdbTimeout:
+            return "Couldn't connect to mobile."
+        devices = adb.list()
+        if devices and devices[0].state == "device":
+            return func(*args, **kwargs)
+        return "Couldn't connect to mobile."
+        
+    return wrapper
 
 @tool
 def run_command(command: str) -> str:
@@ -150,22 +171,25 @@ def web_search(
 
 
 @tool
-def mirror_mobile_screen() -> str:
+@adb_required
+def mirror_mobile(
+    source: Literal["screen", "camera"],
+    camera_facing: Optional[Literal["front", "back"]]
+) -> str:
     """
-    Mirror the mobile screen using scrcpy.
+    Mirror the mobile.
     """
-    subprocess.Popen("scrcpy", shell=True)
-    return "Starting mobile screen mirroring using scrcpy."
-
-
-@tool
-def mirror_mobile_camera(facing: Literal["front", "back"] = "back") -> str:
-    """
-    Mirror the mobile camera using scrcpy.
-    """
-    subprocess.Popen([
-        "scrcpy",
-        "--video-source=camera",
-        f"--camera-facing={facing}"
-    ])
-    return "Starting mobile camera mirroring using scrcpy."
+    if source == "screen":
+        subprocess.Popen("scrcpy", shell=True)
+        return "Starting mobile screen mirroring using scrcpy."
+    elif source == "camera":
+        if not camera_facing or camera_facing not in ["front", "back"]:
+            camera_facing = "back"
+        subprocess.Popen([
+            "scrcpy",
+            "--video-source=camera",
+            f"--camera-facing={camera_facing}"
+        ])
+        return f"Starting mobile camera {camera_facing} mirroring using scrcpy."
+    else:
+        return "Invalid source. Use 'screen' or 'camera'."

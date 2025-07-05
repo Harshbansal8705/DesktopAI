@@ -7,8 +7,7 @@ from langchain_core.messages import HumanMessage
 from src.core.llm import model
 from src.utils.logger import get_logger
 from .tools import (
-    mirror_mobile_camera,
-    mirror_mobile_screen,
+    mirror_mobile,
     run_command,
     open_google_chrome,
     open_whatsapp_web,
@@ -45,8 +44,7 @@ agent = create_react_agent(
         show_popup_widget,
         hide_popup_widget,
         web_search,
-        mirror_mobile_screen,
-        mirror_mobile_camera,
+        mirror_mobile,
         do_nothing,
         exit_assistant,
     ],

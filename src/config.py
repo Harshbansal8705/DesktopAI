@@ -76,5 +76,13 @@ class Config:
         "a Desktop Assistant named \"Jasper\". So, focus on words like 'Jasper'."
     )
 
+    # ADB Configuration
+    ADB_HOST = os.environ.get("ADB_HOST", "127.0,0,1")
+    ADB_PORT = int(os.environ.get("ADB_PORT", 5037))
+
+    # Mobile Device Configuration
+    MOBILE_HOST = os.environ.get("MOBILE_HOST")
+    MOBILE_PORT = int(os.environ.get("MOBILE_PORT", 5555))
+
 # Create a global config instance
 config = Config()
