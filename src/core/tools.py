@@ -162,3 +162,25 @@ def web_search(
     except Exception as e:
         logger.error(f"[web_search] Error: {e}")
         return f"Error during web search: {e}"
+
+
+@tool
+def mirror_mobile_screen() -> str:
+    """
+    Mirror the mobile screen using scrcpy.
+    """
+    subprocess.Popen("scrcpy", shell=True)
+    return "Starting mobile screen mirroring using scrcpy."
+
+
+@tool
+def mirror_mobile_camera(facing: Literal["front", "back"] = "back") -> str:
+    """
+    Mirror the mobile camera using scrcpy.
+    """
+    subprocess.Popen([
+        "scrcpy",
+        "--video-source=camera",
+        f"--camera-facing={facing}"
+    ])
+    return "Starting mobile camera mirroring using scrcpy."
