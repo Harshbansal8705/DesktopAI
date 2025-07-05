@@ -46,19 +46,10 @@ def run_command(command: str) -> str:
 
 
 @tool
-def open_google_chrome(url: str) -> str:
+def open_google_chrome(url: Optional[str], new_window: bool = False) -> str:
     """
-    Open Google Chrome with the specified URL.
-
-    Parameters:
-    - url (str): The URL to open in Google Chrome. (new_window:<url> opens the url in new window)
+    Open Google Chrome with the specified URL (if url is provided).
     """
-    # Check if the URL contains the "new_window:" prefix
-    new_window = False
-    if url.startswith("new_window:"):
-        new_window = True
-        url = url[len("new_window:") :]
-
     command = f"google-chrome-stable {'--new-window' if new_window else ''} {url if url else ''}"
     logger.info(f"[open_google_chrome] Command: {command}")
 
@@ -148,12 +139,6 @@ def web_search(
 ) -> str:
     """
     Execute a search query using the Tavily Search API.
-
-    Parameters:
-    - query (str): The search query to execute.
-    - max_results (int): The maximum number of results to return. Default is 5.
-    - search_depth (Optional[Literal["basic", "advanced"]]): The depth of the search.
-    Default is "basic". Use "advanced" for more detailed results.
     """
     search_tool = TavilySearch(api_key=config.TAVILY_API_KEY, max_results=max_results, search_depth=search_depth)
     try:
