@@ -61,13 +61,16 @@ class DesktopAssistant:
         overlay.put_message("query", query)
         logger.debug(f"Invoking agent with: {query}")
         overlay.put_message("status", "Processing...", "gold")
-
-        response = call_agent(query)
-
-        logger.info(f"Agent response: {response}")
-        overlay.put_message("response", response)
-        overlay.put_message("status", "Active", "green")
-        self.speech.speak(response)
+        try:
+            response = call_agent(query)
+            logger.info(f"Agent response: {response}")
+            overlay.put_message("response", response)
+            overlay.put_message("status", "Active", "green")
+            self.speech.speak(response)
+        except Exception as e:
+            logger.error(f"Error processing query: {e}")
+            overlay.put_message("status", "Error occurred", "red")
+            self.speech.speak("Sorry, an error occurred while processing your request.")
 
     def start(self):
         """Start the assistant."""
