@@ -13,6 +13,8 @@ logger = get_logger()
 
 _stop_assistant = False
 
+# Registry to store all tools
+_tools_registry = []
 
 adb = AdbClient(host=config.ADB_HOST, port=config.ADB_PORT)
 
@@ -24,7 +26,7 @@ def register_stop_assistant(callback):
 
 def tool(_func=None, *, return_direct=False):
     """
-    A Tool decorator with logging.
+    A Tool decorator with logger and tool registration.
     """
     def decorator(func):
         @_tool(return_direct=return_direct)
@@ -38,6 +40,9 @@ def tool(_func=None, *, return_direct=False):
             except Exception as e:
                 logger.error(f"[{func.__name__}] Error: {e}")
                 return f"Error in {func.__name__}: {e}"
+        
+        # Register the tool
+        _tools_registry.append(wrapper)
         return wrapper
     return decorator(_func) if _func is not None else decorator
 
@@ -193,3 +198,20 @@ def mirror_mobile(
         return f"Starting mobile camera {camera_facing} mirroring using scrcpy."
     else:
         return "Invalid source. Use 'screen' or 'camera'."
+
+
+@tool
+@adb_required
+def get_location() -> str:
+    """
+    Get the current location from the connected mobile device using ADB.
+    """
+    device = adb.device()
+    return device.shell(r"dumpsys location | grep 'Location\[' | head -n 1 | grep -oE '[0-9]+\.[0-9]+,[0-9]+\.[0-9]+'")
+
+
+def get_all_tools():
+    """
+    Get all registered tools.
+    """
+    return _tools_registry
