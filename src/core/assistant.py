@@ -6,18 +6,7 @@ from langgraph.prebuilt.chat_agent_executor import AgentState
 from langchain_core.messages import HumanMessage
 from src.core.llm import model
 from src.utils.logger import get_logger
-from .tools import (
-    mirror_mobile,
-    run_command,
-    open_google_chrome,
-    open_whatsapp_web,
-    get_screenshot,
-    show_popup_widget,
-    hide_popup_widget,
-    exit_assistant,
-    do_nothing,
-    web_search,
-)
+from .tools import get_all_tools  # Import the function to get all tools
 from langgraph.checkpoint.sqlite import SqliteSaver
 import sqlite3
 from src.config import config
@@ -36,18 +25,7 @@ logger.info("Chat model initialized.")
 
 agent = create_react_agent(
     model=model,
-    tools=[
-        run_command,
-        open_google_chrome,
-        open_whatsapp_web,
-        get_screenshot,
-        show_popup_widget,
-        hide_popup_widget,
-        web_search,
-        mirror_mobile,
-        do_nothing,
-        exit_assistant,
-    ],
+    tools=get_all_tools(),
     prompt=prompt,
     state_schema=State,
     checkpointer=checkpointer,
