@@ -3,30 +3,30 @@ DesktopAI Assistant - Clean and Modular Voice Assistant
 
 This is the main entry point for the DesktopAI assistant with a clean modular architecture.
 """
-import sys
+
 import os
+import sys
 
 # Add the src directory to Python path for easy imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
-
-from src.core.assistant import call_agent
-from src.audio.audio_processor import AudioProcessor
-from src.utils.logger import get_logger
-from src.audio.ttsplayer import TTSPlayer
-from src.ui.overlay import app, overlay
-from src.audio.listener import Listener
-from src.core.tools import register_stop_assistant
-from src.config import config
-from src.utils.thread_executor import executor
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 import threading
+
+from src.audio.audio_processor import AudioProcessor
+from src.audio.listener import Listener
+from src.audio.ttsplayer import TTSPlayer
+from src.core.assistant import call_agent
+from src.core.tools import register_stop_assistant
+from src.ui.overlay import app, overlay
+from src.utils.logger import get_logger
+from src.utils.thread_executor import executor
 
 logger = get_logger()
 
 
 class DesktopAssistant:
     """Main DesktopAI Assistant class with clean modular architecture."""
-    
+
     def __init__(self):
         """Initialize the assistant with all required components."""
         self.lock = threading.Lock()
@@ -38,7 +38,7 @@ class DesktopAssistant:
         # Text-to-Speech
         self.speech = TTSPlayer()
         self.speech.start()
-        
+
         # Audio processing
         self.audio_processor = AudioProcessor()
         self.listener = Listener(tts_player=self.speech, overlay=overlay)
@@ -83,7 +83,7 @@ class DesktopAssistant:
         self.speech.speak("Shutting down!")
         overlay.put_message("status", "Shutting down...", "red")
         logger.info("Shutting down...")
-        
+
         self.listener.stop_listening()
         self.speech.shutdown()
         executor.shutdown(wait=False, cancel_futures=True)

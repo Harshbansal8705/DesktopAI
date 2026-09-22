@@ -9,25 +9,29 @@ potential future use — e.g., if we want to decouple VAD into its own
 component or use it in a different pipeline.
 """
 
-import numpy as np
-import torch
-import pvporcupine
-import struct
-import sounddevice as sd
-import time
-import soundfile as sf
 import os
+import struct
+import sys
+import time
+
+import numpy as np
+import pvporcupine
+import sounddevice as sd
+import soundfile as sf
+import torch
 from resemblyzer import VoiceEncoder, preprocess_wav
 
 torch.set_num_threads(1)
-import collections, os, threading
+import collections
+import threading
+
+from src.config import config
 from src.utils.logger import get_logger
 from src.utils.thread_executor import executor
-from src.config import config
 
 model, utils = torch.hub.load(repo_or_dir="snakers4/silero-vad", model="silero_vad")
 
-(get_speech_timestamps, save_audio, read_audio, VADIterator, collect_chunks) = utils
+get_speech_timestamps, save_audio, read_audio, VADIterator, collect_chunks = utils
 
 logger = get_logger()
 
@@ -53,23 +57,21 @@ class VoiceActivityDetector:
         self.porcupine = pvporcupine.create(
             access_key=config.PORCUPINE_ACCESS_KEY,
             keyword_paths=[config.WAKE_WORD_MODEL],
-            sensitivities=[0.95]
+            sensitivities=[0.95],
         )
 
         # Initialize audio stream
         self.stream = sd.InputStream(
             channels=self.CHANNELS,
             samplerate=self.SAMPLE_RATE,
-            dtype='int16',
-            blocksize=self.num_samples
+            dtype="int16",
+            blocksize=self.num_samples,
         )
         self.stream.start()
 
         # Initialize audio output stream
         self.output_stream = sd.OutputStream(
-            samplerate=44100,
-            channels=1,
-            dtype='float32'
+            samplerate=44100, channels=1, dtype="float32"
         )
         self.output_stream.start()
 
@@ -80,14 +82,16 @@ class VoiceActivityDetector:
         self.owner_embeddings = None
 
         if os.path.exists(self.OWNER_VOICE_FILE):
-            self.owner_embeddings = self.voice_encoder.embed_utterance(preprocess_wav(self.OWNER_VOICE_FILE))
+            self.owner_embeddings = self.voice_encoder.embed_utterance(
+                preprocess_wav(self.OWNER_VOICE_FILE)
+            )
             logger.info("✅ Owner voice file found. Loading embeddings...")
         else:
             logger.error(
                 "Owner voice file not found. Please record your voice and save it in data/owner.wav\n"
                 "Run `python setup/record_owner_voice.py` to record your voice."
             )
-            exit(1)
+            sys.exit(1)
 
     def int2float(self, sound):
         abs_max = np.abs(sound).max()
@@ -111,12 +115,17 @@ class VoiceActivityDetector:
             max_silence_frames = config.MAX_SILENCE_FRAMES
             max_recording_frames = config.MAX_RECORDING_FRAMES
 
-            while silence_frames < max_silence_frames and len(frames) < max_recording_frames:
+            while (
+                silence_frames < max_silence_frames
+                and len(frames) < max_recording_frames
+            ):
                 audio_chunk, _ = self.stream.read(self.num_samples)
                 audio_float32 = self.int2float(audio_chunk)
                 frames.append(audio_chunk)
 
-                confidence = model(torch.from_numpy(audio_float32), self.SAMPLE_RATE).item()
+                confidence = model(
+                    torch.from_numpy(audio_float32), self.SAMPLE_RATE
+                ).item()
 
                 if confidence > self.confidence_threshold:
                     silence_frames = 0
@@ -152,7 +161,9 @@ class VoiceActivityDetector:
             float_queue.append(audio_float)
 
             # Check for wake word if not already recording
-            pcm = struct.unpack_from("h" * self.porcupine.frame_length, audio_chunk.tobytes())
+            pcm = struct.unpack_from(
+                "h" * self.porcupine.frame_length, audio_chunk.tobytes()
+            )
             keyword_index = self.porcupine.process(pcm)
             if keyword_index == -1:
                 continue
@@ -189,12 +200,12 @@ class VoiceActivityDetector:
 
     def stop_listening(self):
         self.listening = False
-        if hasattr(self, 'porcupine'):
+        if hasattr(self, "porcupine"):
             self.porcupine.delete()
-        if hasattr(self, 'stream'):
+        if hasattr(self, "stream"):
             self.stream.stop()
             self.stream.close()
-        if hasattr(self, 'output_stream'):
+        if hasattr(self, "output_stream"):
             self.output_stream.stop()
             self.output_stream.close()
 
@@ -203,7 +214,7 @@ class VoiceActivityDetector:
         self.output_stream.stop()
         self.output_stream.start()
         # Convert sound data to float32 before playing
-        sound_data = sound_data.astype('float32')
+        sound_data = sound_data.astype("float32")
         # Play the new sound
         self.output_stream.write(sound_data)
 

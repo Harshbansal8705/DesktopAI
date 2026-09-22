@@ -1,6 +1,7 @@
 from langchain_core.messages import HumanMessage
-from langgraph.prebuilt.chat_agent_executor import AgentState
 from langchain_core.messages.utils import count_tokens_approximately, trim_messages
+from langgraph.prebuilt.chat_agent_executor import AgentState
+
 from src.core.llm import model
 
 
@@ -41,7 +42,4 @@ def summarize_conversation(state: AgentState, max_tokens: int = 1000):
     summarization_input = old_messages + [HumanMessage(content=prompt)]
     response = model.invoke(summarization_input)
 
-    return {
-        "summary": response.content,
-        "messages": recent_messages
-    }
+    return {"summary": response.content, "messages": recent_messages}

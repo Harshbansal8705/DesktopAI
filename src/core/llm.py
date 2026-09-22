@@ -1,6 +1,6 @@
 from langchain.chat_models import init_chat_model
-from src.config import config
 
+from src.config import config
 
 model = init_chat_model(
     model=config.LLM_MODEL,

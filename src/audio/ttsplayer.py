@@ -1,7 +1,15 @@
-import asyncio, edge_tts, os, pyaudio, threading, queue, tempfile
-from src.utils.logger import get_logger
+import asyncio
+import os
+import queue
+import tempfile
+import threading
+
+import edge_tts
+import pyaudio
 from pydub import AudioSegment
+
 from src.config import config
+from src.utils.logger import get_logger
 
 logger = get_logger()
 
@@ -116,4 +124,5 @@ class TTSPlayer(threading.Thread):
         try:
             self.tts_queue.join(timeout=1.0)
         except:
-            pass  # If we time out, just continue with shutdown
+            # If we time out, just continue with shutdown
+            logger.error("Error joining TTS queue")

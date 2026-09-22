@@ -1,14 +1,17 @@
-import functools, subprocess
-from typing import List, Literal, Optional
+import functools
+import subprocess
+from typing import Literal
+
+from adbutils import AdbClient
+from adbutils.errors import AdbTimeout
 from langchain_core.tools import tool as _tool
 from langchain_core.tools.structured import StructuredTool
 from langchain_tavily import TavilySearch
-from src.config import config
-from src.utils.logger import get_logger
-from src.ui.overlay import overlay
 from PIL import ImageGrab
-from adbutils import AdbClient
-from adbutils.errors import AdbTimeout
+
+from src.config import config
+from src.ui.overlay import overlay
+from src.utils.logger import get_logger
 
 logger = get_logger()
 
@@ -29,6 +32,7 @@ def tool(_func=None, *, return_direct=False):
     """
     A Tool decorator with logger and tool registration.
     """
+
     def decorator(func):
         @_tool(return_direct=return_direct)
         @functools.wraps(func)
@@ -41,16 +45,19 @@ def tool(_func=None, *, return_direct=False):
             except Exception as e:
                 logger.error(f"[{func.__name__}] Error: {e}")
                 return f"Error in {func.__name__}: {e}"
-        
+
         # Register the tool
         _tools_registry.append(wrapper)
         return wrapper
+
     return decorator(_func) if _func is not None else decorator
+
 
 def adb_required(func):
     """
     A decorator to ensure ADB client is initialized before running the function.
     """
+
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:
@@ -61,8 +68,9 @@ def adb_required(func):
         if devices and devices[0].state == "device":
             return func(*args, **kwargs)
         return "Couldn't connect to mobile."
-        
+
     return wrapper
+
 
 @tool
 def run_command(command: str) -> str:
@@ -73,7 +81,7 @@ def run_command(command: str) -> str:
 
 
 @tool
-def open_google_chrome(url: Optional[str], new_window: bool = False) -> str:
+def open_google_chrome(url: str | None, new_window: bool = False) -> str:
     """
     Open Google Chrome with the specified URL (if url is provided).
     """
@@ -128,7 +136,6 @@ def do_nothing() -> None:
     A function that does nothing
     """
     logger.info("[do_nothing] Called.")
-    return None
 
 
 @tool(return_direct=True)
@@ -151,6 +158,7 @@ def exit_assistant() -> str:
     if _stop_assistant:
         # Schedule the shutdown to happen after the response is returned
         import threading
+
         threading.Timer(0.1, _stop_assistant).start()
     else:
         logger.warning("[exit] No stop callback registered.")
@@ -162,12 +170,16 @@ def exit_assistant() -> str:
 def web_search(
     query: str,
     max_results: int = 5,
-    search_depth: Optional[Literal["basic", "advanced"]] = "basic"
+    search_depth: Literal["basic", "advanced"] | None = "basic",
 ) -> str:
     """
     Execute a search query using the Tavily Search API.
     """
-    search_tool = TavilySearch(api_key=config.TAVILY_API_KEY, max_results=max_results, search_depth=search_depth)
+    search_tool = TavilySearch(
+        api_key=config.TAVILY_API_KEY,
+        max_results=max_results,
+        search_depth=search_depth,
+    )
     try:
         results = search_tool.invoke({"query": query})
         return str(results)
@@ -180,7 +192,7 @@ def web_search(
 @adb_required
 def mirror_mobile(
     source: Literal["screen", "camera"],
-    camera_facing: Optional[Literal["front", "back"]]
+    camera_facing: Literal["front", "back"] | None,
 ) -> str:
     """
     Mirror the mobile.
@@ -191,11 +203,9 @@ def mirror_mobile(
     elif source == "camera":
         if not camera_facing or camera_facing not in ["front", "back"]:
             camera_facing = "back"
-        subprocess.Popen([
-            "scrcpy",
-            "--video-source=camera",
-            f"--camera-facing={camera_facing}"
-        ])
+        subprocess.Popen(
+            ["scrcpy", "--video-source=camera", f"--camera-facing={camera_facing}"]
+        )
         return f"Starting mobile camera {camera_facing} mirroring using scrcpy."
     else:
         return "Invalid source. Use 'screen' or 'camera'."
@@ -208,10 +218,12 @@ def get_location() -> str:
     Get the current location from the connected mobile device using ADB.
     """
     device = adb.device()
-    return device.shell(r"dumpsys location | grep 'Location\[' | head -n 1 | grep -oE '[0-9]+\.[0-9]+,[0-9]+\.[0-9]+'")
+    return device.shell(
+        r"dumpsys location | grep 'Location\[' | head -n 1 | grep -oE '[0-9]+\.[0-9]+,[0-9]+\.[0-9]+'"
+    )
 
 
-def get_all_tools() -> List[StructuredTool]:
+def get_all_tools() -> list[StructuredTool]:
     """
     Get all registered tools.
     """

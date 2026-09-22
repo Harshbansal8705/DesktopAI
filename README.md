@@ -256,11 +256,11 @@ OWNER_INTERESTS="AI, Music"    # Your interests (optional)
 ### Audio Settings
 ```python
 # Audio configuration in src/config.py
-SAMPLE_RATE = 16000              # Audio sample rate
-CHANNELS = 1                     # Mono audio
-CONFIDENCE_THRESHOLD = 0.5       # VAD sensitivity
-MAX_SILENCE_FRAMES = 60          # Stop recording after silence
-SPEAKER_SIMILARITY_THRESHOLD = 0.6 # Voice verification threshold
+SAMPLE_RATE = 16000  # Audio sample rate
+CHANNELS = 1  # Mono audio
+CONFIDENCE_THRESHOLD = 0.5  # VAD sensitivity
+MAX_SILENCE_FRAMES = 60  # Stop recording after silence
+SPEAKER_SIMILARITY_THRESHOLD = 0.6  # Voice verification threshold
 ```
 
 ### LLM Configuration
@@ -276,9 +276,9 @@ LLM_TEMPERATURE=0.8
 # Interface settings in src/config.py
 OVERLAY_WIDTH = 400
 OVERLAY_HEIGHT = 200
-OVERLAY_X = 50                   # Default position
+OVERLAY_X = 50  # Default position
 OVERLAY_Y = 50
-MESSAGE_TIMEOUT = 5              # Auto-hide timeout
+MESSAGE_TIMEOUT = 5  # Auto-hide timeout
 ```
 
 ## 🚀 Advanced Usage

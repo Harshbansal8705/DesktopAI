@@ -1,13 +1,12 @@
 # generate_prompt.py
-from langchain_core.runnables import RunnableConfig
-from langchain_core.messages import SystemMessage, AIMessage, HumanMessage
-from langchain_core.messages.utils import count_tokens_approximately
-from langgraph.prebuilt.chat_agent_executor import AgentState
-from typing import Any, List
+from typing import Any
 
-from src.utils.logger import get_logger
-from .summarizer import summarize_conversation
+from langchain_core.messages import SystemMessage
+from langchain_core.runnables import RunnableConfig
+from langgraph.prebuilt.chat_agent_executor import AgentState
+
 from src.config import config
+from src.utils.logger import get_logger
 
 logger = get_logger()
 
@@ -35,12 +34,11 @@ def _build_user_profile() -> str:
     return "### 👤 About the User:\n\n" + "\n".join(fields)
 
 
-def prompt(state: AgentState, config: RunnableConfig) -> List[Any]:
+def prompt(state: AgentState, config: RunnableConfig) -> list[Any]:
     logger.debug("Generating prompt...")
 
     from src.config import config as app_config
 
-    messages = state.get("messages", [])
     summary = state.get("summary", "")
 
     assistant_name = app_config.ASSISTANT_NAME

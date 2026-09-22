@@ -1,9 +1,12 @@
 # logger.py
-import logging
 import inspect
+import logging
 import os
 from pathlib import Path
-from colorama import Fore, Style, init as colorama_init
+
+from colorama import Fore, Style
+from colorama import init as colorama_init
+
 from src.config import config
 
 colorama_init(autoreset=True)
@@ -60,7 +63,7 @@ def get_logger(level=config.LOG_LEVEL):
 
     formatter = ColoredFormatter(
         "[%(asctime)s] %(levelname)s [%(filename)s]: %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
     # Individual log file handler

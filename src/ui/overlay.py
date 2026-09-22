@@ -3,27 +3,28 @@ Alternative GUI overlay using PyQt5 for better transparency support.
 Install with: pip install PyQt5
 """
 
-import sys, os
+import sys
+from queue import Queue
+
+from PyQt5.QtCore import QSize, Qt, QTimer
+from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QApplication,
-    QMainWindow,
-    QWidget,
-    QVBoxLayout,
+    QFrame,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
+    QMainWindow,
     QPushButton,
     QScrollArea,
-    QFrame,
-    QLineEdit,
     QToolButton,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt5.QtCore import Qt, QTimer, QSize
-from PyQt5.QtGui import QFont
-from queue import Queue
-from src.utils.thread_executor import executor
 
-from src.utils.logger import get_logger
 from src.config import config
+from src.utils.logger import get_logger
+from src.utils.thread_executor import executor
 
 logger = get_logger()
 
@@ -55,19 +56,22 @@ class TransparentOverlayQt(QMainWindow):
         self.setWindowTitle("Jasper Assistant")
         self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setGeometry(config.OVERLAY_X, config.OVERLAY_Y, config.OVERLAY_WIDTH, config.OVERLAY_HEIGHT)
+        self.setGeometry(
+            config.OVERLAY_X,
+            config.OVERLAY_Y,
+            config.OVERLAY_WIDTH,
+            config.OVERLAY_HEIGHT,
+        )
 
         # Create central widget
         central_widget = QWidget()
         central_widget.setObjectName("centralWidget")
-        central_widget.setStyleSheet(
-            """
+        central_widget.setStyleSheet("""
             #centralWidget {
                 background-color: rgba(0, 0, 0, 150);
                 border-radius: 10px;
             }
-        """
-        )
+        """)
 
         main_layout = QVBoxLayout(central_widget)
 
@@ -86,9 +90,13 @@ class TransparentOverlayQt(QMainWindow):
         top_layout.addStretch()
         # Minimize button as icon at right of status bar
         self.minimize_btn = QToolButton()
-        self.minimize_btn.setIcon(self.style().standardIcon(self.style().SP_TitleBarMinButton))
+        self.minimize_btn.setIcon(
+            self.style().standardIcon(self.style().SP_TitleBarMinButton)
+        )
         self.minimize_btn.setIconSize(QSize(16, 16))
-        self.minimize_btn.setStyleSheet("background: transparent; border: none; margin: 2px;")
+        self.minimize_btn.setStyleSheet(
+            "background: transparent; border: none; margin: 2px;"
+        )
         self.minimize_btn.clicked.connect(self.hide)
         top_layout.addWidget(self.minimize_btn)
         main_layout.addLayout(top_layout)
@@ -116,24 +124,20 @@ class TransparentOverlayQt(QMainWindow):
         # Input box and send button
         self.input_box = QLineEdit()
         self.input_box.setPlaceholderText("Type your message...")
-        self.input_box.setStyleSheet(
-            """
+        self.input_box.setStyleSheet("""
             background-color: #222222;
             color: white;
             padding: 5px;
             border-radius: 5px;
-        """
-        )
+        """)
         self.send_btn = QPushButton("Send")
-        self.send_btn.setStyleSheet(
-            """
+        self.send_btn.setStyleSheet("""
             background-color: #333333;
             color: white;
             border: none;
             padding: 5px;
             border-radius: 5px;
-        """
-        )
+        """)
         self.send_btn.clicked.connect(self.send_message)
         self.input_box.returnPressed.connect(self.send_message)
 
@@ -229,9 +233,8 @@ class TransparentOverlayQt(QMainWindow):
     def send_message(self):
         message = self.input_box.text().strip()
         self.input_box.clear()
-        if message:
-            if self.on_new_message:
-                executor.submit(self.on_new_message, message)
+        if message and self.on_new_message:
+            executor.submit(self.on_new_message, message)
 
 
 app = QApplication(sys.argv)
