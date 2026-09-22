@@ -85,7 +85,9 @@ class Listener:
             sound *= 1 / 32768
         return sound.squeeze()
 
-    def record_audio(self, frames=[]):
+    def record_audio(self, frames=None):
+        if frames is None:
+            frames = []
         with self.lock:
             if self.overlay:
                 self.overlay.put_message("status", "Listening...", "skyblue")

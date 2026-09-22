@@ -5,6 +5,7 @@ An intelligent, voice-activated AI assistant for Linux desktop environments that
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.8+-green.svg)
 ![Platform](https://img.shields.io/badge/platform-Linux-orange.svg)
+![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)
 
 ## 🌟 Key Features
 
@@ -24,7 +25,7 @@ An intelligent, voice-activated AI assistant for Linux desktop environments that
 ### 🖥️ System Integration
 - **Shell Command Execution**: Run any Linux command via voice
 - **Browser Control**: Open Chrome with specific URLs or in new windows
-- **Application Launching**: Quick access to WhatsApp Web and other applications
+- **Application Launching**: Quick access to web applications
 - **Screenshot Capabilities**: Take and analyze screen captures
 - **System Monitoring**: Real-time status updates and logging
 
@@ -40,6 +41,7 @@ An intelligent, voice-activated AI assistant for Linux desktop environments that
 - **Thread-Safe Operations**: Concurrent processing for responsive performance
 - **Comprehensive Logging**: Detailed logs for debugging and monitoring
 - **Environment-Based Config**: Flexible configuration via environment variables
+- **Personalizable**: Customize the assistant's name and personality via config
 
 ## 🏗️ Architecture Overview
 ![architecture.png](architecture.png)
@@ -59,6 +61,7 @@ An intelligent, voice-activated AI assistant for Linux desktop environments that
 ### Optional APIs
 - **Anthropic API Key**: Alternative LLM provider
 - **Google API Key**: For additional services (if needed)
+- **Tavily API Key**: For web search functionality
 
 ## 🚀 Installation
 
@@ -87,7 +90,11 @@ pip install -r requirements.txt
 
 ### 4. Configure Environment Variables
 
-Rename .env.sample to .env and add your API keys.
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and add your API keys. At minimum you'll need `GROQ_API_KEY` and `PORCUPINE_ACCESS_KEY`. You can also customize the assistant by setting the personalization fields (`ASSISTANT_NAME`, `OWNER_NAME`, etc.).
 
 ### 5. Set Up Owner Voice Recognition
 
@@ -131,7 +138,6 @@ QT_QPA_PLATFORM=xcb python main.py
 "Jasper, open Chrome and go to GitHub"
 "Jasper, run ls -la in the terminal"
 "Jasper, take a screenshot"
-"Jasper, open WhatsApp Web"
 "Jasper, what's the weather today?"
 "Jasper, help me write a Python script"
 ```
@@ -157,6 +163,13 @@ QT_QPA_PLATFORM=xcb python main.py
 - **hide_popup_widget**: Hide the overlay interface
 - **exit_assistant**: Safely shutdown the assistant
 
+### Web & Search
+- **web_search**: Search the web using Tavily API
+
+### Mobile Integration (requires ADB)
+- **mirror_mobile**: Mirror mobile screen or camera via scrcpy
+- **get_location**: Get location from connected Android device
+
 ### Utility Functions
 - **do_nothing**: No-operation function for when no action is needed
 
@@ -169,6 +182,8 @@ DesktopAI/
 ├── requirements.txt                # Python dependencies
 ├── LICENSE                         # MIT license
 ├── README.md                       # This documentation
+├── CONTRIBUTING.md                 # Contribution guidelines
+├── CODE_OF_CONDUCT.md              # Community code of conduct
 │
 ├── src/                            # Source code directory
 │   ├── __init__.py
@@ -185,10 +200,9 @@ DesktopAI/
 │   ├── audio/                      # Audio processing components
 │   │   ├── __init__.py
 │   │   ├── listener.py             # Voice listener with wake word
-│   │   ├── vad.py                  # Voice activity detection
+│   │   ├── vad.py                  # Voice activity detection (standalone, future use)
 │   │   ├── audio_processor.py      # Audio transcription
-│   │   ├── ttsplayer.py            # Text-to-speech
-│   │   └── voice_input_handler.py  # Complete voice pipeline
+│   │   └── ttsplayer.py            # Text-to-speech
 │   │
 │   ├── ui/                         # User interface components
 │   │   ├── __init__.py
@@ -203,7 +217,7 @@ DesktopAI/
 │   └── record_owner_voice.py       # Voice profile recording
 │
 ├── data/                           # Data files
-│   ├── owner.wav                   # Owner voice profile (created)
+│   ├── owner.wav                   # Owner voice profile (created during setup)
 │   └── soundeffects/               # Audio feedback sounds
 │       ├── start_recording.mp3
 │       └── stop_recording.mp3
@@ -211,11 +225,33 @@ DesktopAI/
 ├── wakewordmodels/                 # Wake word detection models
 │   └── Jasper_en_linux_v3_0_0.ppn
 │
-├── logs/                           # Application logs (created)
-└── checkpoints/                    # Conversation memory (created)
+├── .github/                        # GitHub templates and workflows
+│   ├── ISSUE_TEMPLATE/
+│   │   ├── bug_report.md
+│   │   └── feature_request.md
+│   ├── PULL_REQUEST_TEMPLATE.md
+│   └── workflows/
+│       └── lint.yml
+│
+├── logs/                           # Application logs (created at runtime)
+└── checkpoints/                    # Conversation memory (created at runtime)
 ```
 
 ## ⚙️ Configuration
+
+All configuration is managed through environment variables (`.env` file) and `src/config.py`.
+
+### Personalization
+```bash
+# In your .env file
+ASSISTANT_NAME="Jasper"        # Your assistant's name
+OWNER_NAME="Your Name"         # Your name
+OWNER_AGE="25"                 # Your age (optional)
+OWNER_LOCATION="India"         # Your location (optional)
+OWNER_OCCUPATION="Student"     # Your occupation (optional)
+OWNER_COLLEGE="MIT"            # Your college (optional)
+OWNER_INTERESTS="AI, Music"    # Your interests (optional)
+```
 
 ### Audio Settings
 ```python
@@ -228,17 +264,16 @@ SPEAKER_SIMILARITY_THRESHOLD = 0.6 # Voice verification threshold
 ```
 
 ### LLM Configuration
-```python
-# LLM settings
-LLM_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
-LLM_PROVIDER = "groq"
-LLM_TEMPERATURE = 0.8
-MAX_TOKENS_HISTORY = 10000
+```bash
+# In your .env file (or defaults in config.py)
+LLM_MODEL="meta-llama/llama-4-scout-17b-16e-instruct"
+LLM_PROVIDER="groq"
+LLM_TEMPERATURE=0.8
 ```
 
 ### UI Configuration
 ```python
-# Interface settings
+# Interface settings in src/config.py
 OVERLAY_WIDTH = 400
 OVERLAY_HEIGHT = 200
 OVERLAY_X = 50                   # Default position
@@ -258,43 +293,32 @@ def my_custom_tool(parameter: str) -> str:
     """Description of what this tool does."""
     # Your implementation here
     return "Tool result"
-
-# Register in assistant.py
-agent = create_react_agent(
-    model=model,
-    tools=[
-        # existing tools...
-        my_custom_tool,
-    ],
-    # other parameters...
-)
 ```
+
+The `@tool` decorator automatically registers and adds logging to your tool. See [CONTRIBUTING.md](CONTRIBUTING.md) for more details.
 
 ### Custom LLM Providers
 
-Modify `src/core/llm.py` to use different providers:
+Set environment variables to use different providers:
 
-```python
-from langchain.chat_models import init_chat_model
-
-model = init_chat_model(
-    model="your-model-name",
-    model_provider="your-provider",
-    api_key="your-api-key",
-    # additional parameters...
-)
+```bash
+LLM_MODEL="your-model-name"
+LLM_PROVIDER="your-provider"
 ```
 
-### Conversation Customization
+Or modify `src/core/llm.py` directly for more control.
 
-Edit the system prompt in `src/core/generate_prompt.py`:
+## 🤝 Contributing
 
-```python
-system_msg = f"""
-You are **YourAssistantName**, a custom AI assistant...
-# Customize personality, capabilities, and behavior
-"""
-```
+We welcome contributions! Whether it's bug reports, feature requests, or code contributions, every bit helps.
+
+Please read our [Contributing Guide](CONTRIBUTING.md) before submitting a PR.
+
+See the [open issues](https://github.com/HarshBansal8705/DesktopAI/issues) for a list of known issues and planned features.
+
+## 📜 Code of Conduct
+
+This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
 
 ## 📝 License
 

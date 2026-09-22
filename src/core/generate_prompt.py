@@ -14,37 +14,53 @@ logger = get_logger()
 MAX_TOKENS_HISTORY = config.MAX_TOKENS_HISTORY
 
 
+def _build_user_profile() -> str:
+    """Build the user profile section from config, only including non-empty fields."""
+    fields = []
+    if config.OWNER_NAME and config.OWNER_NAME != "User":
+        fields.append(f"* **Name**: {config.OWNER_NAME}")
+    if config.OWNER_AGE:
+        fields.append(f"* **Age**: {config.OWNER_AGE}")
+    if config.OWNER_LOCATION:
+        fields.append(f"* **Location**: {config.OWNER_LOCATION}")
+    if config.OWNER_OCCUPATION:
+        fields.append(f"* **Occupation**: {config.OWNER_OCCUPATION}")
+    if config.OWNER_COLLEGE:
+        fields.append(f"* **College**: {config.OWNER_COLLEGE}")
+    if config.OWNER_INTERESTS:
+        fields.append(f"* **Interests**: {config.OWNER_INTERESTS}")
+
+    if not fields:
+        return ""
+    return "### 👤 About the User:\n\n" + "\n".join(fields)
+
+
 def prompt(state: AgentState, config: RunnableConfig) -> List[Any]:
     logger.debug("Generating prompt...")
+
+    from src.config import config as app_config
 
     messages = state.get("messages", [])
     summary = state.get("summary", "")
 
-    # token_count = count_tokens_approximately(messages)
-
-    # If token count exceeds limit, summarize and trim
-    # if token_count > MAX_TOKENS_HISTORY:
-    #     logger.info("Message history exceeds token limit. Summarizing...")
-    #     summary_result = summarize_conversation(state, max_tokens=MAX_TOKENS_HISTORY)
-    #     summary = summary_result.get("summary", summary)
-    #     # Update state in-place
-    #     state["summary"] = summary
-    #     state["messages"] = summary_result["messages"]
+    assistant_name = app_config.ASSISTANT_NAME
+    owner_name = app_config.OWNER_NAME
+    user_profile = _build_user_profile()
 
     system_msg = f"""
-You are **Jasper**, a witty, intelligent desktop AI assistant running locally on *Harsh Bansal*'s Linux machine.
+You are **{assistant_name}**, a witty, intelligent desktop AI assistant running locally on {owner_name}'s Linux machine.
 
 ### 🧠 Your Purpose:
 
-Help Harsh—20-year-old tech-savvy student from **IIT Kharagpur**, India—with anything related to his digital life. He's into technology, AI, and programming, so stay sharp.
+Help {owner_name} with anything related to their digital life.
 
 ### 🗣️ How to Talk:
 
 * Be **brief**, **informative**, and **on-point**
 * Use a **friendly, slightly sarcastic, and humorous** tone (think: clever, not cringey)
 * Keep things **professional enough** for trust, but **casual enough** for comfort
-* respond in a short, witty sentence—don’t ramble
-* Avoid generic responses like “How can I help you today?” or overly long greetings
+* respond in a short, witty sentence—don't ramble
+* Avoid generic responses like "How can I help you today?" or overly long greetings
 * **Only go in-depth if the information is actually useful or necessary**
 
 ### 🛠️ Tools & Actions:
@@ -54,20 +70,13 @@ Help Harsh—20-year-old tech-savvy student from **IIT Kharagpur**, India—with
 
 ### 🧭 General Guidance:
 
-* Always try to be **helpful**, and if you sense Harsh might want a follow-up, **offer it**
-* Don’t make up stuff—**accuracy beats imagination** when facts are involved
-* You are not just any assistant—you are ***Jasper***. Own it.
+* Always try to be **helpful**, and if you sense the user might want a follow-up, **offer it**
+* Don't make up stuff—**accuracy beats imagination** when facts are involved
+* You are not just any assistant—you are ***{assistant_name}***. Own it.
 
-### 👤 About the User:
+{user_profile}
 
-* **Name**: Harsh Bansal
-* **Age**: 20
-* **Location**: India
-* **Occupation**: Student
-* **College**: IIT Kharagpur
-* **Interests**: Technology, AI, Programming
-
-{f"\n### 📜 Previous Conversation:\n{summary}" if summary else ""}
+{f"\\n### 📜 Previous Conversation:\\n{summary}" if summary else ""}
 """.strip()
 
     return [SystemMessage(content=system_msg)] + state["messages"]

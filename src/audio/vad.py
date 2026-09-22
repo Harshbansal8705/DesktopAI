@@ -1,3 +1,14 @@
+"""
+Voice Activity Detector (VAD) — Standalone module.
+
+NOTE: This module is NOT currently used by the main application.
+The Listener class in `listener.py` handles wake word detection, speaker
+verification, and voice activity detection together. This standalone
+VoiceActivityDetector class is kept as a reference implementation for
+potential future use — e.g., if we want to decouple VAD into its own
+component or use it in a different pipeline.
+"""
+
 import numpy as np
 import torch
 import pvporcupine
@@ -85,7 +96,9 @@ class VoiceActivityDetector:
             sound *= 1 / 32768
         return sound.squeeze()
 
-    def record_audio(self, frames=[]):
+    def record_audio(self, frames=None):
+        if frames is None:
+            frames = []
         with self.lock:
             if self.overlay:
                 self.overlay.put_message("status", "Listening...", "skyblue")

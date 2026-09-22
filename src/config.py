@@ -6,6 +6,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Base directory for resolving relative paths
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
 class Config:
     """Configuration settings for the Desktop assistant."""
 
@@ -17,9 +21,9 @@ class Config:
     TAVILY_API_KEY = os.environ.get("TAVILY_API_KEY")
 
     # LLM Configuration
-    LLM_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
-    LLM_PROVIDER = "groq"
-    LLM_TEMPERATURE = 0.8
+    LLM_MODEL = os.environ.get("LLM_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
+    LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "groq")
+    LLM_TEMPERATURE = float(os.environ.get("LLM_TEMPERATURE", "0.8"))
     LLM_API_KEY = GROQ_API_KEY
 
     # Logging
@@ -43,15 +47,15 @@ class Config:
     TTS_CHUNK_SIZE = 1024
 
     # File Paths
-    OWNER_VOICE_FILE = "data/owner.wav"
-    WAKE_WORD_MODEL = "wakewordmodels/Jasper_en_linux_v3_0_0.ppn"
-    SCREENSHOT_FILE = "screenshot.png"
-    TEMP_AUDIO_FILE = "temp.wav"
-    CHECKPOINTS_DB = "checkpoints/sqlite.db"
+    OWNER_VOICE_FILE = os.path.join(BASE_DIR, "data", "owner.wav")
+    WAKE_WORD_MODEL = os.path.join(BASE_DIR, "wakewordmodels", "Jasper_en_linux_v3_0_0.ppn")
+    SCREENSHOT_FILE = os.path.join(BASE_DIR, "screenshot.png")
+    TEMP_AUDIO_FILE = os.path.join(BASE_DIR, "temp.wav")
+    CHECKPOINTS_DB = os.path.join(BASE_DIR, "checkpoints", "sqlite.db")
 
     # Sound Effects
-    START_SOUND_FILE = "data/soundeffects/start_recording.mp3"
-    STOP_SOUND_FILE = "data/soundeffects/stop_recording.mp3"
+    START_SOUND_FILE = os.path.join(BASE_DIR, "data", "soundeffects", "start_recording.mp3")
+    STOP_SOUND_FILE = os.path.join(BASE_DIR, "data", "soundeffects", "stop_recording.mp3")
 
     # UI Configuration
     OVERLAY_WIDTH = 400
@@ -77,12 +81,21 @@ class Config:
     )
 
     # ADB Configuration
-    ADB_HOST = os.environ.get("ADB_HOST", "127.0,0,1")
+    ADB_HOST = os.environ.get("ADB_HOST", "127.0.0.1")
     ADB_PORT = int(os.environ.get("ADB_PORT", 5037))
 
     # Mobile Device Configuration
     MOBILE_HOST = os.environ.get("MOBILE_HOST")
     MOBILE_PORT = int(os.environ.get("MOBILE_PORT", 5555))
+
+    # Personalization — customize the assistant's identity
+    ASSISTANT_NAME = os.environ.get("ASSISTANT_NAME", "Jasper")
+    OWNER_NAME = os.environ.get("OWNER_NAME", "User")
+    OWNER_AGE = os.environ.get("OWNER_AGE", "")
+    OWNER_LOCATION = os.environ.get("OWNER_LOCATION", "")
+    OWNER_OCCUPATION = os.environ.get("OWNER_OCCUPATION", "")
+    OWNER_COLLEGE = os.environ.get("OWNER_COLLEGE", "")
+    OWNER_INTERESTS = os.environ.get("OWNER_INTERESTS", "")
 
 # Create a global config instance
 config = Config()

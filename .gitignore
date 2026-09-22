@@ -1,7 +1,42 @@
+# Environment
 .env
+.env.*
+!.env.example
 venv/
+.venv/
+
+# Python
 __pycache__/
-logs/
+*.py[cod]
+*$py.class
+*.egg
+*.egg-info/
+.eggs/
+dist/
+build/
+*.so
+
+# IDE
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs and runtime data
+logs/
 checkpoints/
+
+# Generated files
+screenshot.png
+temp.wav
+
+# User data (created during setup)
 data/owner.wav
+
+# Type checking / testing
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.coverage
