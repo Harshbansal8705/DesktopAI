@@ -2,11 +2,8 @@ import functools
 import subprocess
 from typing import Literal
 
-from adbutils import AdbClient
-from adbutils.errors import AdbTimeout
 from langchain_core.tools import tool as _tool
 from langchain_core.tools.structured import StructuredTool
-from langchain_tavily import TavilySearch
 from PIL import ImageGrab
 
 from src.config import config
@@ -15,12 +12,27 @@ from src.utils.logger import get_logger
 
 logger = get_logger()
 
+try:
+    from adbutils import AdbClient
+    from adbutils.errors import AdbTimeout  # noqa: F401
+    _adb_available = True
+except ImportError:
+    _adb_available = False
+    logger.warning("adbutils not installed — mobile tools (mirror_mobile, get_location) disabled")
+
+try:
+    from langchain_tavily import TavilySearch
+    _tavily_available = True
+except ImportError:
+    _tavily_available = False
+    logger.warning("langchain-tavily not installed — web_search tool disabled")
+
 _stop_assistant = False
 
 # Registry to store all tools
 _tools_registry = []
 
-adb = AdbClient(host=config.ADB_HOST, port=config.ADB_PORT)
+adb = AdbClient(host=config.ADB_HOST, port=config.ADB_PORT) if _adb_available else None
 
 
 def register_stop_assistant(callback):
@@ -166,61 +178,62 @@ def exit_assistant() -> str:
     return "Assistant stopped."
 
 
-@tool
-def web_search(
-    query: str,
-    max_results: int = 5,
-    search_depth: Literal["basic", "advanced"] | None = "basic",
-) -> str:
-    """
-    Execute a search query using the Tavily Search API.
-    """
-    search_tool = TavilySearch(
-        api_key=config.TAVILY_API_KEY,
-        max_results=max_results,
-        search_depth=search_depth,
-    )
-    try:
-        results = search_tool.invoke({"query": query})
-        return str(results)
-    except Exception as e:
-        logger.error(f"[web_search] Error: {e}")
-        return f"Error during web search: {e}"
-
-
-@tool
-@adb_required
-def mirror_mobile(
-    source: Literal["screen", "camera"],
-    camera_facing: Literal["front", "back"] | None,
-) -> str:
-    """
-    Mirror the mobile.
-    """
-    if source == "screen":
-        subprocess.Popen("scrcpy", shell=True)
-        return "Starting mobile screen mirroring using scrcpy."
-    elif source == "camera":
-        if not camera_facing or camera_facing not in ["front", "back"]:
-            camera_facing = "back"
-        subprocess.Popen(
-            ["scrcpy", "--video-source=camera", f"--camera-facing={camera_facing}"]
+if _tavily_available:
+    @tool
+    def web_search(
+        query: str,
+        max_results: int = 5,
+        search_depth: Literal["basic", "advanced"] | None = "basic",
+    ) -> str:
+        """
+        Execute a search query using the Tavily Search API.
+        """
+        search_tool = TavilySearch(
+            api_key=config.TAVILY_API_KEY,
+            max_results=max_results,
+            search_depth=search_depth,
         )
-        return f"Starting mobile camera {camera_facing} mirroring using scrcpy."
-    else:
-        return "Invalid source. Use 'screen' or 'camera'."
+        try:
+            results = search_tool.invoke({"query": query})
+            return str(results)
+        except Exception as e:
+            logger.error(f"[web_search] Error: {e}")
+            return f"Error during web search: {e}"
 
 
-@tool
-@adb_required
-def get_location() -> str:
-    """
-    Get the current location from the connected mobile device using ADB.
-    """
-    device = adb.device()
-    return device.shell(
-        r"dumpsys location | grep 'Location\[' | head -n 1 | grep -oE '[0-9]+\.[0-9]+,[0-9]+\.[0-9]+'"
-    )
+if _adb_available:
+    @tool
+    @adb_required
+    def mirror_mobile(
+        source: Literal["screen", "camera"],
+        camera_facing: Literal["front", "back"] | None,
+    ) -> str:
+        """
+        Mirror the mobile.
+        """
+        if source == "screen":
+            subprocess.Popen("scrcpy", shell=True)
+            return "Starting mobile screen mirroring using scrcpy."
+        elif source == "camera":
+            if not camera_facing or camera_facing not in ["front", "back"]:
+                camera_facing = "back"
+            subprocess.Popen(
+                ["scrcpy", "--video-source=camera", f"--camera-facing={camera_facing}"]
+            )
+            return f"Starting mobile camera {camera_facing} mirroring using scrcpy."
+        else:
+            return "Invalid source. Use 'screen' or 'camera'."
+
+    @tool
+    @adb_required
+    def get_location() -> str:
+        """
+        Get the current location from the connected mobile device using ADB.
+        """
+        device = adb.device()
+        return device.shell(
+            r"dumpsys location | grep 'Location\[' | head -n 1 | grep -oE '[0-9]+\.[0-9]+,[0-9]+\.[0-9]+'"
+        )
 
 
 def get_all_tools() -> list[StructuredTool]:
