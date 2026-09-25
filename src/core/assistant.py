@@ -89,8 +89,6 @@ def call_agent(message):
 if __name__ == "__main__":
     # Run the agent
     message = HumanMessage(content="Hey, how are you doing?")
-    config = {"configurable": {"thread_id": "1"}}
-
     response = call_agent(message)
 
     print(response)
