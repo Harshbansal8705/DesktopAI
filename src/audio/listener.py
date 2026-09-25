@@ -121,8 +121,9 @@ class Listener:
                 else:
                     silence_frames += 1
 
-            # Convert frames to numpy array
-            audio_data = np.concatenate(frames[:-60])
+            # Convert frames to numpy array, trimming trailing silence
+            trim = min(60, max(len(frames) - 1, 0))
+            audio_data = np.concatenate(frames[:-trim] if trim > 0 else frames)
             self.recording = False
             logger.debug("Recording stopped...")
             # Play stop sound effect
