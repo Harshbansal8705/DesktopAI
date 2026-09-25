@@ -254,7 +254,10 @@ def main():
     # Demo updating
     QTimer.singleShot(1000, lambda: overlay.update_status("Listening", "lightblue"))
     QTimer.singleShot(
-        2000, lambda: overlay.add_log_message("Jasper, what's the weather today?")
+        2000,
+        lambda: overlay.add_log_message(
+            f"{config.ASSISTANT_NAME}, what's the weather today?"
+        ),
     )
     QTimer.singleShot(3000, lambda: overlay.update_status("Processing", "yellow"))
     QTimer.singleShot(4000, lambda: overlay.update_status("Responding", "lightgreen"))
