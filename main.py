@@ -54,6 +54,10 @@ class DesktopAssistant:
             logger.info("Processing audio...")
             overlay.put_message("status", "Analyzing voice...", "gold")
             transcription = self.audio_processor.process_audio(audio)
+            if not transcription or not transcription.strip():
+                logger.warning("Transcription returned empty or None, skipping.")
+                overlay.put_message("status", "Couldn't hear that", "orange")
+                return
             self.process_query(transcription)
 
     def process_query(self, query: str):
