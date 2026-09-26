@@ -97,22 +97,6 @@ def open_google_chrome(url: str | None, new_window: bool = False) -> str:
 
 
 @tool
-def open_whatsapp_web() -> str:
-    """
-    Open WhatsApp Web
-    """
-    logger.info("[open_whatsapp_web] Opening WhatsApp Web...")
-    try:
-        subprocess.Popen(
-            ["gtk-launch", "chrome-hnpfjngllnobngcgfapefoaidbinmjnm-Default.desktop"]
-        )
-        return "WhatsApp Web launched."
-    except Exception as e:
-        logger.error(f"[open_whatsapp_web] Error: {e}")
-        return f"Error: {e}"
-
-
-@tool
 def show_popup_widget() -> str:
     """
     Show the popup widget
