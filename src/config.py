@@ -14,10 +14,13 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 class Config:
     """Configuration settings for the Desktop assistant."""
 
+    BASE_DIR = BASE_DIR
+
     # API Keys
     GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
     GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
     TOGETHER_API_KEY = os.environ.get("TOGETHER_API_KEY")
+    ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
     PORCUPINE_ACCESS_KEY = os.environ.get("PORCUPINE_ACCESS_KEY")
     TAVILY_API_KEY = os.environ.get("TAVILY_API_KEY")
 
@@ -25,7 +28,22 @@ class Config:
     LLM_MODEL = os.environ.get("LLM_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
     LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "groq")
     LLM_TEMPERATURE = float(os.environ.get("LLM_TEMPERATURE", "0.8"))
-    LLM_API_KEY = GROQ_API_KEY
+
+    @property
+    def LLM_API_KEY(self):
+        direct_key = os.environ.get("LLM_API_KEY")
+        if direct_key:
+            return direct_key
+        provider = (self.LLM_PROVIDER or "groq").lower()
+        if "groq" in provider:
+            return self.GROQ_API_KEY
+        elif "google" in provider:
+            return self.GOOGLE_API_KEY
+        elif "together" in provider:
+            return self.TOGETHER_API_KEY
+        elif "anthropic" in provider:
+            return self.ANTHROPIC_API_KEY
+        return self.GROQ_API_KEY
 
     # Logging
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
@@ -79,12 +97,21 @@ class Config:
     THREAD_ID = "4"
     MAX_TOKENS_HISTORY = 10000
 
+    # Personalization — customize the assistant's identity
+    ASSISTANT_NAME = os.environ.get("ASSISTANT_NAME", "Jasper")
+    OWNER_NAME = os.environ.get("OWNER_NAME", "User")
+    OWNER_AGE = os.environ.get("OWNER_AGE", "")
+    OWNER_LOCATION = os.environ.get("OWNER_LOCATION", "")
+    OWNER_OCCUPATION = os.environ.get("OWNER_OCCUPATION", "")
+    OWNER_COLLEGE = os.environ.get("OWNER_COLLEGE", "")
+    OWNER_INTERESTS = os.environ.get("OWNER_INTERESTS", "")
+
     # Whisper Configuration
     TRANSCRIPTION_MODEL = "distil-whisper-large-v3-en"
     TRANSCRIPTION_PROMPT = (
         "Please transcribe the following audio accurately, maintaining proper "
         "punctuation and formatting. This is a conversation between a user and "
-        "a Desktop Assistant named \"Jasper\". So, focus on words like 'Jasper'."
+        f"a Desktop Assistant named \"{ASSISTANT_NAME}\". So, focus on words like '{ASSISTANT_NAME}'."
     )
 
     # ADB Configuration
@@ -94,15 +121,6 @@ class Config:
     # Mobile Device Configuration
     MOBILE_HOST = os.environ.get("MOBILE_HOST")
     MOBILE_PORT = int(os.environ.get("MOBILE_PORT", "5555"))
-
-    # Personalization — customize the assistant's identity
-    ASSISTANT_NAME = os.environ.get("ASSISTANT_NAME", "Jasper")
-    OWNER_NAME = os.environ.get("OWNER_NAME", "User")
-    OWNER_AGE = os.environ.get("OWNER_AGE", "")
-    OWNER_LOCATION = os.environ.get("OWNER_LOCATION", "")
-    OWNER_OCCUPATION = os.environ.get("OWNER_OCCUPATION", "")
-    OWNER_COLLEGE = os.environ.get("OWNER_COLLEGE", "")
-    OWNER_INTERESTS = os.environ.get("OWNER_INTERESTS", "")
 
 
 # Create a global config instance

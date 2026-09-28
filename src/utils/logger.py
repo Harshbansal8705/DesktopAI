@@ -46,6 +46,10 @@ def get_logger(level=config.LOG_LEVEL):
 
     # Extract module name from filename
     module_name = Path(filename).stem
+    # Sanitize module name for filesystem compatibility (handles <string>, <stdin>, etc.)
+    for ch in '<>:"/\\|?*':
+        module_name = module_name.replace(ch, "_")
+    module_name = module_name.strip("_") or "app"
 
     # Use cached logger if it exists
     if module_name in _loggers:
@@ -55,11 +59,12 @@ def get_logger(level=config.LOG_LEVEL):
     if level is None:
         level = "INFO"
 
-    # Create log file path
-    log_file = f"logs/{module_name}.log"
+    # Ensure logs directory exists relative to project root
+    logs_dir = os.path.join(config.BASE_DIR, "logs")
+    os.makedirs(logs_dir, exist_ok=True)
 
-    # Ensure logs directory exists
-    os.makedirs("logs", exist_ok=True)
+    # Create log file path
+    log_file = os.path.join(logs_dir, f"{module_name}.log")
 
     formatter = ColoredFormatter(
         "[%(asctime)s] %(levelname)s [%(filename)s]: %(message)s",
@@ -71,7 +76,9 @@ def get_logger(level=config.LOG_LEVEL):
     handler.setFormatter(formatter)
 
     # Global log file handler
-    global_handler = logging.FileHandler("logs/global.log", encoding="utf-8")
+    global_handler = logging.FileHandler(
+        os.path.join(logs_dir, "global.log"), encoding="utf-8"
+    )
     global_handler.setFormatter(formatter)
 
     # Console handler

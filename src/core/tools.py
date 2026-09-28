@@ -85,12 +85,26 @@ def open_google_chrome(url: str | None, new_window: bool = False) -> str:
     """
     Open Google Chrome with the specified URL (if url is provided).
     """
-    command = f"google-chrome-stable {'--new-window' if new_window else ''} {url if url else ''}"
-    logger.info(f"[open_google_chrome] Command: {command}")
+    target_url = url if url else "https://www.google.com"
+    logger.info(f"[open_google_chrome] Opening Chrome with URL: {target_url}")
 
     try:
-        subprocess.Popen(command, shell=True)
-        return f"Google Chrome opened with URL: {url}"
+        import shutil
+        import webbrowser
+
+        chrome_bins = ["google-chrome-stable", "google-chrome", "chrome", "chromium"]
+        found_bin = next((b for b in chrome_bins if shutil.which(b)), None)
+
+        if found_bin:
+            flags = ["--new-window"] if new_window else []
+            subprocess.Popen([found_bin] + flags + [target_url])
+            return f"Google Chrome opened with URL: {url}"
+        else:
+            if new_window:
+                webbrowser.open_new(target_url)
+            else:
+                webbrowser.open(target_url)
+            return f"Browser opened with URL: {url}"
     except Exception as e:
         logger.error(f"[open_google_chrome] Error: {e}")
         return f"Error opening Google Chrome: {e}"
@@ -99,13 +113,13 @@ def open_google_chrome(url: str | None, new_window: bool = False) -> str:
 @tool
 def open_whatsapp_web() -> str:
     """
-    Open WhatsApp Web
+    Open WhatsApp Web in the browser.
     """
     logger.info("[open_whatsapp_web] Opening WhatsApp Web...")
     try:
-        subprocess.Popen(
-            ["gtk-launch", "chrome-hnpfjngllnobngcgfapefoaidbinmjnm-Default.desktop"]
-        )
+        import webbrowser
+
+        webbrowser.open("https://web.whatsapp.com")
         return "WhatsApp Web launched."
     except Exception as e:
         logger.error(f"[open_whatsapp_web] Error: {e}")
