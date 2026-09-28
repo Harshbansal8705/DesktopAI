@@ -3,7 +3,7 @@
 An intelligent, voice-activated AI assistant for Linux desktop environments that combines advanced AI capabilities with seamless system integration. Built with modern technologies including LangChain, Groq API, and PyQt5 for a responsive and intuitive user experience.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Python](https://img.shields.io/badge/python-3.8+-green.svg)
+![Python](https://img.shields.io/badge/python-3.12+-green.svg)
 ![Platform](https://img.shields.io/badge/platform-Linux-orange.svg)
 ![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)
 
@@ -50,7 +50,7 @@ An intelligent, voice-activated AI assistant for Linux desktop environments that
 
 ### System Requirements
 - **Operating System**: Linux (tested on Arch Linux, Ubuntu, Fedora)
-- **Python**: 3.8 or higher
+- **Python**: 3.12 or higher
 - **Audio**: Working microphone and speakers/headphones
 - **Display**: X11 or Wayland with Qt support
 
@@ -72,23 +72,13 @@ git clone https://github.com/Harshbansal8705/DesktopAI.git
 cd DesktopAI
 ```
 
-### 2. Set Up Python Environment
+### 2. Install Dependencies
 
 ```bash
-# Create virtual environment
-python -m venv venv
-
-# Activate virtual environment
-source venv/bin/activate
+uv sync
 ```
 
-### 3. Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Configure Environment Variables
+### 3. Configure Environment Variables
 
 ```bash
 cp .env.example .env
@@ -96,7 +86,7 @@ cp .env.example .env
 
 Edit `.env` and add your API keys. At minimum you'll need `GROQ_API_KEY` and `PORCUPINE_ACCESS_KEY`. You can also customize the assistant by setting the personalization fields (`ASSISTANT_NAME`, `OWNER_NAME`, etc.).
 
-### 5. Set Up Owner Voice Recognition
+### 4. Set Up Owner Voice Recognition
 
 ```bash
 # Record your voice for speaker verification
@@ -105,7 +95,7 @@ python setup/record_owner_voice.py
 
 Follow the prompts to record 20 seconds of your voice. This creates a voice profile for security.
 
-### 6. Make Run Script Executable
+### 5. Make Run Script Executable
 
 ```bash
 chmod +x run.sh
@@ -120,8 +110,7 @@ chmod +x run.sh
 ./run.sh
 
 # Or manually
-source venv/bin/activate
-QT_QPA_PLATFORM=xcb python main.py
+QT_QPA_PLATFORM=xcb uv run python main.py
 ```
 
 ### Voice Interaction
@@ -179,7 +168,10 @@ QT_QPA_PLATFORM=xcb python main.py
 DesktopAI/
 ├── main.py                         # Application entry point
 ├── run.sh                          # Startup script
-├── requirements.txt                # Python dependencies
+├── pyproject.toml                  # Project metadata, dependencies & ruff config
+├── uv.lock                         # Lockfile for reproducible installs (uv)
+├── .env.example                    # Template for environment variables
+├── architecture.png                # Architecture diagram
 ├── LICENSE                         # MIT license
 ├── README.md                       # This documentation
 ├── CONTRIBUTING.md                 # Contribution guidelines
@@ -191,7 +183,7 @@ DesktopAI/
 │   │
 │   ├── core/                       # Core AI components
 │   │   ├── __init__.py
-│   │   ├── assistant.py            # Main LangChain agent
+│   │   ├── assistant.py            # Main LangGraph ReAct agent
 │   │   ├── llm.py                  # LLM provider setup
 │   │   ├── generate_prompt.py      # System prompt generation
 │   │   ├── summarizer.py           # Conversation summarization

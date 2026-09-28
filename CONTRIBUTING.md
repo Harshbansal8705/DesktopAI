@@ -36,19 +36,15 @@ Thank you for your interest in contributing to DesktopAI! This document provides
 ### Prerequisites
 
 - **OS**: Linux (tested on Arch Linux, Ubuntu, Fedora)
-- **Python**: 3.8+
+- **Python**: 3.12+
 - **Hardware**: Working microphone and speakers
 - **Display**: X11 or Wayland with Qt support
 
 ### Environment Setup
 
 ```bash
-# Create and activate virtual environment
-python -m venv venv
-source venv/bin/activate
-
 # Install dependencies
-pip install -r requirements.txt
+uv sync
 
 # Copy environment file and add your API keys
 cp .env.example .env
@@ -182,7 +178,7 @@ def my_new_tool(parameter: str) -> str:
 
 ## Code Style
 
-- **Python version**: 3.8+ compatible
+- **Python version**: 3.12+ compatible
 - **Formatting**: Use 4-space indentation
 - **Imports**: Group stdlib, third-party, and local imports (separated by blank lines)
 - **Docstrings**: Use docstrings for all classes and public functions

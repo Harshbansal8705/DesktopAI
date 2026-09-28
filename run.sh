@@ -1,2 +1,2 @@
-source ./venv/bin/activate
-QT_QPA_PLATFORM=xcb python main.py
+#!/usr/bin/env bash
+QT_QPA_PLATFORM=xcb uv run python main.py
