@@ -9,9 +9,11 @@ potential future use — e.g., if we want to decouple VAD into its own
 component or use it in a different pipeline.
 """
 
+import collections
 import os
 import struct
 import sys
+import threading
 import time
 
 import numpy as np
@@ -22,12 +24,10 @@ import torch
 from resemblyzer import VoiceEncoder, preprocess_wav
 
 torch.set_num_threads(1)
-import collections
-import threading
 
-from src.config import config
-from src.utils.logger import get_logger
-from src.utils.thread_executor import executor
+from src.config import config  # noqa: E402
+from src.utils.logger import get_logger  # noqa: E402
+from src.utils.thread_executor import executor  # noqa: E402
 
 model, utils = torch.hub.load(repo_or_dir="snakers4/silero-vad", model="silero_vad")
 
@@ -70,9 +70,7 @@ class VoiceActivityDetector:
         self.stream.start()
 
         # Initialize audio output stream
-        self.output_stream = sd.OutputStream(
-            samplerate=44100, channels=1, dtype="float32"
-        )
+        self.output_stream = sd.OutputStream(samplerate=44100, channels=1, dtype="float32")
         self.output_stream.start()
 
         self.confidence_threshold = config.CONFIDENCE_THRESHOLD
@@ -82,9 +80,7 @@ class VoiceActivityDetector:
         self.owner_embeddings = None
 
         if os.path.exists(self.OWNER_VOICE_FILE):
-            self.owner_embeddings = self.voice_encoder.embed_utterance(
-                preprocess_wav(self.OWNER_VOICE_FILE)
-            )
+            self.owner_embeddings = self.voice_encoder.embed_utterance(preprocess_wav(self.OWNER_VOICE_FILE))
             logger.info("✅ Owner voice file found. Loading embeddings...")
         else:
             logger.error(
@@ -115,17 +111,12 @@ class VoiceActivityDetector:
             max_silence_frames = config.MAX_SILENCE_FRAMES
             max_recording_frames = config.MAX_RECORDING_FRAMES
 
-            while (
-                silence_frames < max_silence_frames
-                and len(frames) < max_recording_frames
-            ):
+            while silence_frames < max_silence_frames and len(frames) < max_recording_frames:
                 audio_chunk, _ = self.stream.read(self.num_samples)
                 audio_float32 = self.int2float(audio_chunk)
                 frames.append(audio_chunk)
 
-                confidence = model(
-                    torch.from_numpy(audio_float32), self.SAMPLE_RATE
-                ).item()
+                confidence = model(torch.from_numpy(audio_float32), self.SAMPLE_RATE).item()
 
                 if confidence > self.confidence_threshold:
                     silence_frames = 0
@@ -161,9 +152,7 @@ class VoiceActivityDetector:
             float_queue.append(audio_float)
 
             # Check for wake word if not already recording
-            pcm = struct.unpack_from(
-                "h" * self.porcupine.frame_length, audio_chunk.tobytes()
-            )
+            pcm = struct.unpack_from("h" * self.porcupine.frame_length, audio_chunk.tobytes())
             keyword_index = self.porcupine.process(pcm)
             if keyword_index == -1:
                 continue
@@ -220,9 +209,7 @@ class VoiceActivityDetector:
 
     def play_audio(self, audio_data):
         duration_seconds = len(audio_data) / self.SAMPLE_RATE
-        logger.debug(
-            f"Received audio data of length: {len(audio_data)} samples ({duration_seconds:.2f} seconds)"
-        )
+        logger.debug(f"Received audio data of length: {len(audio_data)} samples ({duration_seconds:.2f} seconds)")
 
         # Play back the recorded audio
         sd.play(audio_data, self.SAMPLE_RATE)

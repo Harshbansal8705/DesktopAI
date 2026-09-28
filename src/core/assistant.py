@@ -63,9 +63,7 @@ def call_agent(message):
                             "content": [
                                 {
                                     "type": "image_url",
-                                    "image_url": {
-                                        "url": f"data:image/png;base64,{image_data}"
-                                    },
+                                    "image_url": {"url": f"data:image/png;base64,{image_data}"},
                                 }
                             ],
                         }
@@ -80,10 +78,8 @@ def call_agent(message):
             if isinstance(msg, list):
                 msg = "\n".join([msg.content for msg in msg])
             return msg
-        else:
-            return msg
-    else:
         return msg
+    return msg
 
 
 if __name__ == "__main__":

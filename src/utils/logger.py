@@ -4,8 +4,7 @@ import logging
 import os
 from pathlib import Path
 
-from colorama import Fore, Style
-from colorama import init as colorama_init
+from colorama import Fore, Style, init as colorama_init
 
 from src.config import config
 

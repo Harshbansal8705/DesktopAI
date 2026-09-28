@@ -49,20 +49,14 @@ class Config:
 
     # File Paths
     OWNER_VOICE_FILE = os.path.join(BASE_DIR, "data", "owner.wav")
-    WAKE_WORD_MODEL = os.path.join(
-        BASE_DIR, "wakewordmodels", "Jasper_en_linux_v3_0_0.ppn"
-    )
+    WAKE_WORD_MODEL = os.path.join(BASE_DIR, "wakewordmodels", "Jasper_en_linux_v3_0_0.ppn")
     SCREENSHOT_FILE = os.path.join(BASE_DIR, "screenshot.png")
     TEMP_AUDIO_FILE = os.path.join(BASE_DIR, "temp.wav")
     CHECKPOINTS_DB = os.path.join(BASE_DIR, "checkpoints", "sqlite.db")
 
     # Sound Effects
-    START_SOUND_FILE = os.path.join(
-        BASE_DIR, "data", "soundeffects", "start_recording.mp3"
-    )
-    STOP_SOUND_FILE = os.path.join(
-        BASE_DIR, "data", "soundeffects", "stop_recording.mp3"
-    )
+    START_SOUND_FILE = os.path.join(BASE_DIR, "data", "soundeffects", "start_recording.mp3")
+    STOP_SOUND_FILE = os.path.join(BASE_DIR, "data", "soundeffects", "stop_recording.mp3")
 
     # UI Configuration
     OVERLAY_WIDTH = 400

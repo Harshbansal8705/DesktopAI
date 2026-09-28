@@ -1,0 +1,139 @@
+[project]
+name = "desktopai"
+version = "0.1.0"
+description = "An intelligent, voice-activated AI assistant for Linux desktop environments"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.12"
+authors = [{ name = "Harsh Bansal" }]
+keywords = ["ai", "voice-assistant", "desktop", "linux", "langchain"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    # Core framework
+    "langchain>=0.3.25",
+    "langchain-core>=0.3.59",
+    "langchain-groq>=0.3.2",
+    "langchain-anthropic>=0.3.13",
+    "langchain-tavily>=0.2.6",
+    "langgraph>=0.4.3",
+    "langgraph-checkpoint-sqlite>=2.0.7",
+    "langgraph-prebuilt>=0.1.8",
+    # LLM providers
+    "groq>=0.24.0",
+    "anthropic>=0.51.0",
+    # Audio processing
+    "pvporcupine>=3.0.5",
+    "PyAudio>=0.2.14",
+    "sounddevice>=0.5.2",
+    "soundfile>=0.13.1",
+    "Resemblyzer>=0.1.4",
+    "edge-tts>=7.0.2",
+    "pydub>=0.25.1",
+    # ML / VAD
+    "torch>=2.0.0",
+    "numpy>=1.24.0",
+    # UI
+    "PyQt5>=5.15.11",
+    # System / utilities
+    "python-dotenv>=1.1.0",
+    "colorama>=0.4.6",
+    "pillow>=11.0.0",
+    "adbutils>=2.9.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.9.0",
+    "pre-commit>=4.0.0",
+    "pytest>=8.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Harshbansal8705/DesktopAI"
+Repository = "https://github.com/Harshbansal8705/DesktopAI"
+Issues = "https://github.com/Harshbansal8705/DesktopAI/issues"
+
+[project.scripts]
+desktopai = "main:main"
+
+# ── Ruff ─────────────────────────────────────────────────────────────────────
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+src = ["src", "."]
+
+# Exclude auto-generated / non-project directories
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "*.egg-info",
+    "build",
+    "dist",
+    "data",
+    "wakewordmodels",
+    "setup",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # pyflakes
+    "I",     # isort (import sorting)
+    "N",     # pep8-naming
+    "UP",    # pyupgrade
+    "B",     # flake8-bugbear
+    "SIM",   # flake8-simplify
+    "TCH",   # flake8-type-checking (move type-only imports behind TYPE_CHECKING)
+    "RUF",   # ruff-specific rules
+    "C4",    # flake8-comprehensions
+    "PIE",   # flake8-pie (misc. lint)
+    "PT",    # flake8-pytest-style
+    "RET",   # flake8-return
+    "T20",   # flake8-print (flag print statements)
+    "LOG",   # flake8-logging
+]
+
+ignore = [
+    "E501",    # line-too-long (handled by formatter)
+    "T201",    # allow print() — used heavily in CLI/logging
+    "RET504",  # unnecessary assignment before return
+    "UP007",   # use X | Y for union types (needs 3.10+)
+]
+
+# Allow autofix for all enabled rules
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+force-single-line = false
+combine-as-imports = true
+
+[tool.ruff.lint.per-file-ignores]
+"main.py" = ["T201"]       # allow prints in entry point
+"src/utils/logger.py" = ["T201"]
+"__init__.py" = ["F401"]   # unused imports are re-exports
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+docstring-code-format = true

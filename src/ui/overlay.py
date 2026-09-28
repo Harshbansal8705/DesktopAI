@@ -90,13 +90,9 @@ class TransparentOverlayQt(QMainWindow):
         top_layout.addStretch()
         # Minimize button as icon at right of status bar
         self.minimize_btn = QToolButton()
-        self.minimize_btn.setIcon(
-            self.style().standardIcon(self.style().SP_TitleBarMinButton)
-        )
+        self.minimize_btn.setIcon(self.style().standardIcon(self.style().SP_TitleBarMinButton))
         self.minimize_btn.setIconSize(QSize(16, 16))
-        self.minimize_btn.setStyleSheet(
-            "background: transparent; border: none; margin: 2px;"
-        )
+        self.minimize_btn.setStyleSheet("background: transparent; border: none; margin: 2px;")
         self.minimize_btn.clicked.connect(self.hide)
         top_layout.addWidget(self.minimize_btn)
         main_layout.addLayout(top_layout)
@@ -151,19 +147,19 @@ class TransparentOverlayQt(QMainWindow):
         # Enable dragging
         self.drag_position = None
 
-    def mousePressEvent(self, event):
+    def mouse_press_event(self, event):
         """Handle mouse press event for dragging."""
         if event.button() == Qt.LeftButton:
             self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
             event.accept()
 
-    def mouseMoveEvent(self, event):
+    def mouse_move_event(self, event):
         """Handle mouse move event for dragging."""
         if event.buttons() == Qt.LeftButton and self.drag_position:
             self.move(event.globalPos() - self.drag_position)
             event.accept()
 
-    def closeEvent(self, event):
+    def close_event(self, event):
         """Handle window close event."""
         self.running = False
         if self.exit_callback:
@@ -189,9 +185,7 @@ class TransparentOverlayQt(QMainWindow):
         # Auto-scroll to bottom
         QTimer.singleShot(
             50,
-            lambda: self.scroll_area.verticalScrollBar().setValue(
-                self.scroll_area.verticalScrollBar().maximum()
-            ),
+            lambda: self.scroll_area.verticalScrollBar().setValue(self.scroll_area.verticalScrollBar().maximum()),
         )
 
     def put_message(self, msg_type, *args):
@@ -247,16 +241,12 @@ def main():
 
     # Demo updating
     QTimer.singleShot(1000, lambda: overlay.update_status("Listening", "lightblue"))
-    QTimer.singleShot(
-        2000, lambda: overlay.add_log_message("Jasper, what's the weather today?")
-    )
+    QTimer.singleShot(2000, lambda: overlay.add_log_message("Jasper, what's the weather today?"))
     QTimer.singleShot(3000, lambda: overlay.update_status("Processing", "yellow"))
     QTimer.singleShot(4000, lambda: overlay.update_status("Responding", "lightgreen"))
     QTimer.singleShot(
         4500,
-        lambda: overlay.add_log_message(
-            "It's currently sunny and 22°C outside with a light breeze."
-        ),
+        lambda: overlay.add_log_message("It's currently sunny and 22°C outside with a light breeze."),
     )
     QTimer.singleShot(6000, lambda: overlay.update_status("Listening", "lightblue"))
 

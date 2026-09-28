@@ -36,9 +36,7 @@ class TTSPlayer(threading.Thread):
 
     async def synthesize_to_file(self, text: str, filename: str):
         try:
-            communicate = edge_tts.Communicate(
-                text=text, voice=config.TTS_VOICE, rate=config.TTS_RATE
-            )
+            communicate = edge_tts.Communicate(text=text, voice=config.TTS_VOICE, rate=config.TTS_RATE)
             with open(filename, "wb") as f:
                 async for chunk in communicate.stream():
                     if chunk["type"] == "audio":
@@ -123,6 +121,6 @@ class TTSPlayer(threading.Thread):
         # Wait for the queue to be fully processed
         try:
             self.tts_queue.join(timeout=1.0)
-        except:
+        except Exception as e:
             # If we time out, just continue with shutdown
-            logger.error("Error joining TTS queue")
+            logger.error(f"Error joining TTS queue: {e}")

@@ -39,7 +39,7 @@ def summarize_conversation(state: AgentState, max_tokens: int = 1000):
     else:
         prompt = "Create a summary of the conversation above (don't include this instruction in the summary):"
 
-    summarization_input = old_messages + [HumanMessage(content=prompt)]
+    summarization_input = [*old_messages, HumanMessage(content=prompt)]
     response = model.invoke(summarization_input)
 
     return {"summary": response.content, "messages": recent_messages}

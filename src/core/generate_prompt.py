@@ -74,7 +74,7 @@ Help {owner_name} with anything related to their digital life.
 
 {user_profile}
 
-{f"\\n### 📜 Previous Conversation:\\n{summary}" if summary else ""}
+{f"\n### 📜 Previous Conversation:\n{summary}" if summary else ""}
 """.strip()
 
     return [SystemMessage(content=system_msg)] + state["messages"]
