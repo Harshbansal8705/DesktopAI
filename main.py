@@ -54,10 +54,18 @@ class DesktopAssistant:
             logger.info("Processing audio...")
             overlay.put_message("status", "Analyzing voice...", "gold")
             transcription = self.audio_processor.process_audio(audio)
+            if not transcription or not transcription.strip():
+                logger.warning("Empty or invalid audio transcription received.")
+                overlay.put_message("status", "Active", "green")
+                return
             self.process_query(transcription)
 
     def process_query(self, query: str):
         """Process the text query."""
+        if not query or not query.strip():
+            logger.warning("Empty query received; skipping agent invocation.")
+            return
+
         overlay.put_message("query", query)
         logger.debug(f"Invoking agent with: {query}")
         overlay.put_message("status", "Processing...", "gold")

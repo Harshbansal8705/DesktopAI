@@ -121,8 +121,17 @@ class Listener:
                 else:
                     silence_frames += 1
 
-            # Convert frames to numpy array
-            audio_data = np.concatenate(frames[:-60])
+            # Convert frames to numpy array safely
+            if len(frames) > silence_frames and silence_frames > 0:
+                trimmed_frames = frames[:-silence_frames]
+            else:
+                trimmed_frames = frames
+
+            if trimmed_frames:
+                audio_data = np.concatenate(trimmed_frames)
+            else:
+                audio_data = np.array([], dtype=np.int16)
+
             self.recording = False
             logger.debug("Recording stopped...")
             # Play stop sound effect
@@ -177,6 +186,9 @@ class Listener:
                 logger.debug("Stopped TTS playback due to wake word detection")
 
             audio_data = self.record_audio(list(frame_queue))
+            if audio_data is None or len(audio_data) == 0:
+                logger.warning("No audio recorded or empty audio data.")
+                continue
 
             # Process in a separate thread to avoid blocking the main loop
             future = executor.submit(func, audio_data)
