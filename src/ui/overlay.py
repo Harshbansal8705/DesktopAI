@@ -17,6 +17,7 @@ from PyQt5.QtWidgets import (
     QMainWindow,
     QPushButton,
     QScrollArea,
+    QStyle,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -88,9 +89,10 @@ class TransparentOverlayQt(QMainWindow):
         top_layout.addWidget(self.status_indicator)
         top_layout.addWidget(self.status_text)
         top_layout.addStretch()
+        
         # Minimize button as icon at right of status bar
         self.minimize_btn = QToolButton()
-        self.minimize_btn.setIcon(self.style().standardIcon(self.style().SP_TitleBarMinButton))
+        self.minimize_btn.setIcon(self.style().standardIcon(QStyle.SP_TitleBarMinButton))
         self.minimize_btn.setIconSize(QSize(16, 16))
         self.minimize_btn.setStyleSheet("background: transparent; border: none; margin: 2px;")
         self.minimize_btn.clicked.connect(self.hide)
@@ -144,23 +146,23 @@ class TransparentOverlayQt(QMainWindow):
         # Set the central widget
         self.setCentralWidget(central_widget)
 
-        # Enable dragging
+        # Enable dragging variables
         self.drag_position = None
 
-    def mouse_press_event(self, event):
-        """Handle mouse press event for dragging."""
+    def mousePressEvent(self, event):
+        """Handle mouse press event for dragging (camelCase fixed)."""
         if event.button() == Qt.LeftButton:
             self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
             event.accept()
 
-    def mouse_move_event(self, event):
-        """Handle mouse move event for dragging."""
+    def mouseMoveEvent(self, event):
+        """Handle mouse move event for dragging (camelCase fixed)."""
         if event.buttons() == Qt.LeftButton and self.drag_position:
             self.move(event.globalPos() - self.drag_position)
             event.accept()
 
-    def close_event(self, event):
-        """Handle window close event."""
+    def closeEvent(self, event):
+        """Handle window close event (camelCase fixed)."""
         self.running = False
         if self.exit_callback:
             self.exit_callback()
@@ -238,6 +240,7 @@ overlay = TransparentOverlayQt(message_timeout=5)
 # Alternative main function that can be used to test this GUI
 def main():
     overlay.start()
+    overlay.show()  # Added show() so window appears during testing
 
     # Demo updating
     QTimer.singleShot(1000, lambda: overlay.update_status("Listening", "lightblue"))
