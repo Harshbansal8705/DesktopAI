@@ -73,12 +73,16 @@ class Config:
     THREAD_ID = "4"
     MAX_TOKENS_HISTORY = 10000
 
+    # Personalization — customize the assistant's identity
+    ASSISTANT_NAME = os.environ.get("ASSISTANT_NAME", "Jasper")
+
     # Whisper Configuration
     TRANSCRIPTION_MODEL = "distil-whisper-large-v3-en"
     TRANSCRIPTION_PROMPT = (
         "Please transcribe the following audio accurately, maintaining proper "
         "punctuation and formatting. This is a conversation between a user and "
-        "a Desktop Assistant named \"Jasper\". So, focus on words like 'Jasper'."
+        f'a Desktop Assistant named "{ASSISTANT_NAME}". '
+        f"So, focus on words like '{ASSISTANT_NAME}'."
     )
 
     # ADB Configuration
@@ -89,8 +93,6 @@ class Config:
     MOBILE_HOST = os.environ.get("MOBILE_HOST")
     MOBILE_PORT = int(os.environ.get("MOBILE_PORT", "5555"))
 
-    # Personalization — customize the assistant's identity
-    ASSISTANT_NAME = os.environ.get("ASSISTANT_NAME", "Jasper")
     OWNER_NAME = os.environ.get("OWNER_NAME", "User")
     OWNER_AGE = os.environ.get("OWNER_AGE", "")
     OWNER_LOCATION = os.environ.get("OWNER_LOCATION", "")
