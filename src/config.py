@@ -2,6 +2,7 @@
 """Centralized configuration management for Desktop assistant."""
 
 import os
+import uuid
 
 from dotenv import load_dotenv
 
@@ -70,7 +71,7 @@ class Config:
     AUDIO_PROCESSING_TIMEOUT = 10
 
     # Agent Configuration
-    THREAD_ID = "4"
+    THREAD_ID = os.environ.get("THREAD_ID", str(uuid.uuid4()))
     MAX_TOKENS_HISTORY = 10000
 
     # Personalization — customize the assistant's identity
