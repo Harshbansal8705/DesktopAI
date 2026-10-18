@@ -59,6 +59,14 @@ class DesktopAssistant:
     def process_query(self, query: str):
         """Process the text query."""
         overlay.put_message("query", query)
+        confirmation = overlay.resolve_voice_confirmation(query)
+        if confirmation is not None:
+            response = "Execution confirmed. Running the command." if confirmation else "Execution cancelled by user."
+            overlay.put_message("response", response)
+            overlay.put_message("status", "Active", "green")
+            self.speech.speak(response)
+            return
+
         logger.debug(f"Invoking agent with: {query}")
         overlay.put_message("status", "Processing...", "gold")
         try:

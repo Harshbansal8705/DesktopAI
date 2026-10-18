@@ -1,4 +1,7 @@
+import contextlib
 import functools
+import os
+import signal
 import subprocess
 from typing import Literal
 
@@ -10,6 +13,7 @@ from langchain_tavily import TavilySearch
 from PIL import ImageGrab
 
 from src.config import config
+from src.core.command_safety import is_dangerous_command
 from src.ui.overlay import overlay
 from src.utils.logger import get_logger
 
@@ -75,7 +79,39 @@ def adb_required(func):
 @tool
 def run_command(command: str) -> str:
     """Run a shell command on the local Linux machine."""
-    return subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT, text=True)
+    if (
+        config.COMMAND_SAFETY_CHECK_ENABLED
+        and is_dangerous_command(command)
+        and not overlay.request_command_confirmation(command)
+    ):
+        return "Execution cancelled by user"
+
+    process = subprocess.Popen(
+        command,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        start_new_session=os.name == "posix",
+    )
+    try:
+        output, _ = process.communicate(timeout=config.COMMAND_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        if os.name == "posix":
+            with contextlib.suppress(ProcessLookupError):
+                os.killpg(process.pid, signal.SIGKILL)
+        else:
+            process.kill()
+        process.communicate()
+        return f"Command timed out after {config.COMMAND_TIMEOUT} seconds."
+
+    if process.returncode:
+        raise subprocess.CalledProcessError(process.returncode, command, output=output)
+
+    max_output_chars = max(0, config.COMMAND_MAX_OUTPUT_CHARS)
+    if len(output) > max_output_chars:
+        return output[:max_output_chars] + "[Output truncated...]"
+    return output
 
 
 @tool
@@ -196,11 +232,13 @@ def mirror_mobile(
     if source == "screen":
         subprocess.Popen("scrcpy", shell=True)
         return "Starting mobile screen mirroring using scrcpy."
+
     if source == "camera":
-        if not camera_facing or camera_facing not in ["front", "back"]:
+        if camera_facing not in ("front", "back"):
             camera_facing = "back"
         subprocess.Popen(["scrcpy", "--video-source=camera", f"--camera-facing={camera_facing}"])
         return f"Starting mobile camera {camera_facing} mirroring using scrcpy."
+
     return "Invalid source. Use 'screen' or 'camera'."
 
 
