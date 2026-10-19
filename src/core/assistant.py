@@ -1,5 +1,6 @@
 # assistant.py
 import base64
+import os
 import sqlite3
 
 from langchain_core.messages import HumanMessage
@@ -15,6 +16,11 @@ from .generate_prompt import prompt
 from .tools import get_all_tools  # Import the function to get all tools
 
 logger = get_logger()
+
+# Ensure parent directory for checkpoints database exists
+checkpoint_dir = os.path.dirname(config.CHECKPOINTS_DB)
+if checkpoint_dir:
+    os.makedirs(checkpoint_dir, exist_ok=True)
 
 conn = sqlite3.connect(config.CHECKPOINTS_DB, check_same_thread=False)
 checkpointer = SqliteSaver(conn)
