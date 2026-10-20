@@ -25,13 +25,13 @@ class Config:
     LLM_MODEL = os.environ.get("LLM_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
     LLM_PROVIDER = os.environ.get("LLM_PROVIDER", " ")
     LLM_TEMPERATURE = float(os.environ.get("LLM_TEMPERATURE", "0.8"))
-    LLM_API_KEY = { 
+    LLM_API_KEY = {
         "google": GOOGLE_API_KEY,
-          "groq": GROQ_API_KEY, 
-          "together": TOGETHER_API_KEY , 
-          "porcupine": PORCUPINE_ACCESS_KEY, 
+          "groq": GROQ_API_KEY,
+          "together": TOGETHER_API_KEY ,
+          "porcupine": PORCUPINE_ACCESS_KEY,
           "tavily": TAVILY_API_KEY }.get(LLM_PROVIDER)
-    
+
     # Logging
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 
