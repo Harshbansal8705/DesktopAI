@@ -27,10 +27,11 @@ class Config:
     LLM_TEMPERATURE = float(os.environ.get("LLM_TEMPERATURE", "0.8"))
     LLM_API_KEY = {
         "google": GOOGLE_API_KEY,
-          "groq": GROQ_API_KEY,
-          "together": TOGETHER_API_KEY ,
-          "porcupine": PORCUPINE_ACCESS_KEY,
-          "tavily": TAVILY_API_KEY }.get(LLM_PROVIDER)
+        "groq": GROQ_API_KEY,
+        "together": TOGETHER_API_KEY,
+        "porcupine": PORCUPINE_ACCESS_KEY,
+        "tavily": TAVILY_API_KEY,
+    }.get(LLM_PROVIDER)
 
     # Logging
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
