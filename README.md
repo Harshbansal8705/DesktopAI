@@ -263,6 +263,24 @@ LLM_PROVIDER="groq"
 LLM_TEMPERATURE=0.8
 ```
 
+### Command Execution Safety
+
+Commands passed to `run_command` are checked against built-in dangerous-command patterns, including patterns for `rm -rf`, `mkfs`, `dd if=`, `shutdown`, `sudo`, `reboot`, recursive `chmod`, and fork bombs. Chained commands are checked as well.
+
+When a command matches a dangerous pattern and safety checks are enabled, the overlay displays the command and waits for confirmation. Approve with the **Yes** button or say/type `yes` or `confirm`; deny with **No** or say/type `no` or `cancel`. The command runs only after approval.
+
+Execution is limited by a configurable timeout. If it expires, the process is terminated and a timeout message is returned. Output longer than the configured character limit is truncated and suffixed with `[Output truncated...]`.
+
+Set these values in `.env`:
+
+| Environment variable | Default | Description |
+| --- | --- | --- |
+| `COMMAND_SAFETY_CHECK_ENABLED` | `true` | Enable pattern checks and confirmation prompts for dangerous commands. |
+| `COMMAND_TIMEOUT` | `30` | Maximum execution time in seconds. |
+| `COMMAND_MAX_OUTPUT_CHARS` | `2000` | Maximum command output characters before truncation. |
+
+The safety setting is named `COMMAND_SAFETY_CHECK_ENABLED` in the current implementation (not `COMMAND_SAFETY_CHECK`). Dangerous patterns are defined in `src/config.py` as `DEFAULT_DANGEROUS_PATTERNS`; they are built-in defaults, not an environment variable named `DANGEROUS_PATTERNS`.
+
 ### UI Configuration
 ```python
 # Interface settings in src/config.py

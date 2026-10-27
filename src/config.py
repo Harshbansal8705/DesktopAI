@@ -2,6 +2,7 @@
 """Centralized configuration management for Desktop assistant."""
 
 import os
+from typing import ClassVar
 
 from dotenv import load_dotenv
 
@@ -10,9 +11,27 @@ load_dotenv()
 # Base directory for resolving relative paths
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+TEXT_ONLY_MODE = False
+NO_TTS = False
+
 
 class Config:
     """Configuration settings for the Desktop assistant."""
+
+    # Command Execution Safety
+    COMMAND_SAFETY_CHECK_ENABLED = os.environ.get("COMMAND_SAFETY_CHECK_ENABLED", "true").lower() == "true"
+    COMMAND_TIMEOUT = int(os.environ.get("COMMAND_TIMEOUT", "30"))
+    COMMAND_MAX_OUTPUT_CHARS = int(os.environ.get("COMMAND_MAX_OUTPUT_CHARS", "2000"))
+    DEFAULT_DANGEROUS_PATTERNS: ClassVar[list[str]] = [
+        r"\brm\s+-(?:[^\s]*r[^\s]*f|[^\s]*f[^\s]*r)\b",
+        r"\bmkfs(?:\.[\w-]+)?\b",
+        r"\bdd\b(?:\s+\S+)*\s+\bif\s*=",
+        r"\bshutdown\b",
+        r"\bsudo\b",
+        r"\breboot\b",
+        r"\bchmod\s+-R\b",
+        r":\s*\(\s*\)\s*\{\s*:\s*\|\s*:\s*&?\s*\}\s*;\s*:",
+    ]
 
     # API Keys
     GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")

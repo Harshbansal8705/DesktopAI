@@ -4,9 +4,10 @@ Install with: pip install PyQt5
 """
 
 import sys
+import threading
 from queue import Queue
 
-from PyQt5.QtCore import QSize, Qt, QTimer
+from PyQt5.QtCore import QSize, Qt, QThread, QTimer, pyqtSignal
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QApplication,
@@ -15,6 +16,7 @@ from PyQt5.QtWidgets import (
     QLabel,
     QLineEdit,
     QMainWindow,
+    QMessageBox,
     QPushButton,
     QScrollArea,
     QToolButton,
@@ -32,6 +34,9 @@ logger = get_logger()
 class TransparentOverlayQt(QMainWindow):
     """A transparent overlay that displays transcriptions and responses using PyQt."""
 
+    command_confirmation_requested = pyqtSignal(str, object, object)
+    command_confirmation_finished = pyqtSignal(object, bool)
+
     def __init__(self, message_timeout=5, exit_callback=None):
         """Initialize the overlay.
 
@@ -46,6 +51,13 @@ class TransparentOverlayQt(QMainWindow):
         self.message_queue = Queue()
         self.running = True
         self.on_new_message = None
+        self._confirmation_request_lock = threading.Lock()
+        self._confirmation_state_lock = threading.Lock()
+        self._pending_confirmation = None
+        self._confirmation_dialog = None
+        self._confirmation_dialog_request = None
+        self.command_confirmation_requested.connect(self._show_command_confirmation, Qt.QueuedConnection)
+        self.command_confirmation_finished.connect(self._close_command_confirmation, Qt.QueuedConnection)
 
         # Set up the UI
         self.setup_ui()
@@ -193,6 +205,93 @@ class TransparentOverlayQt(QMainWindow):
         self.message_queue.put((msg_type, *args))
         QTimer.singleShot(0, self.process_messages)  # Schedule async-safe execution
 
+    def request_command_confirmation(self, command: str) -> bool:
+        """Ask the user to approve a command, dispatching the dialog on the UI thread."""
+        if QThread.currentThread() == self.thread():
+            return self._confirm_command(command)
+
+        with self._confirmation_request_lock:
+            request = {"completed": threading.Event(), "confirmed": False}
+            with self._confirmation_state_lock:
+                self._pending_confirmation = request
+            self.command_confirmation_requested.emit(command, request, None)
+            request["completed"].wait()
+            with self._confirmation_state_lock:
+                if self._pending_confirmation is request:
+                    self._pending_confirmation = None
+            return request["confirmed"]
+
+    def _show_command_confirmation(self, command: str, request: dict, _unused: object) -> None:
+        try:
+            self.show()
+            self.raise_()
+            self.activateWindow()
+            dialog = QMessageBox(self)
+            dialog.setWindowTitle("Confirm Command Execution")
+            dialog.setText(
+                f"This command may be dangerous. Execute it?\n\n{command}\n\nClick Yes or say “yes” or “confirm”."
+            )
+            dialog.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            dialog.setDefaultButton(QMessageBox.No)
+            dialog.setEscapeButton(QMessageBox.No)
+            dialog.setWindowModality(Qt.NonModal)
+            dialog.buttonClicked.connect(
+                lambda button: self._resolve_command_confirmation(request, button == dialog.button(QMessageBox.Yes))
+            )
+            dialog.finished.connect(lambda _result: self._resolve_command_confirmation(request, False))
+            self._confirmation_dialog = dialog
+            self._confirmation_dialog_request = request
+            dialog.open()
+        except Exception as error:
+            logger.error(f"Error requesting command confirmation: {error}")
+            self._resolve_command_confirmation(request, False)
+
+    def _confirm_command(self, command: str) -> bool:
+        answer = QMessageBox.question(
+            self,
+            "Confirm Command Execution",
+            f"This command may be dangerous. Execute it?\n\n{command}",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        return answer == QMessageBox.Yes
+
+    def _resolve_command_confirmation(self, request: dict, confirmed: bool) -> None:
+        with self._confirmation_state_lock:
+            if self._pending_confirmation is not request or request["completed"].is_set():
+                return
+            request["confirmed"] = confirmed
+            request["completed"].set()
+        self.command_confirmation_finished.emit(request, confirmed)
+
+    def _close_command_confirmation(self, request: dict, confirmed: bool) -> None:
+        if self._confirmation_dialog_request is not request:
+            return
+        dialog = self._confirmation_dialog
+        self._confirmation_dialog = None
+        self._confirmation_dialog_request = None
+        if dialog is not None:
+            dialog.done(QMessageBox.Yes if confirmed else QMessageBox.No)
+
+    def resolve_voice_confirmation(self, response: str) -> bool | None:
+        """Resolve a pending command approval from a concise voice or text response."""
+        normalized = response.strip().lower().rstrip(" .,!?")
+        if normalized in {"yes", "confirm"}:
+            decision = True
+        elif normalized in {"no", "cancel"}:
+            decision = False
+        else:
+            return None
+
+        with self._confirmation_state_lock:
+            request = self._pending_confirmation
+            if request is None or request["completed"].is_set():
+                return None
+            request["confirmed"] = decision
+            request["completed"].set()
+        self.command_confirmation_finished.emit(request, decision)
+        return decision
+
     def process_messages(self):
         """Process messages from the queue."""
         while not self.message_queue.empty():
@@ -217,6 +316,8 @@ class TransparentOverlayQt(QMainWindow):
 
     def start(self):
         """Start the overlay."""
+        self.update_status("Jasper Active", "lightgreen")
+        self.show()
         self.update_status(f"{config.ASSISTANT_NAME} Active", "lightgreen")
 
     def shutdown(self):
