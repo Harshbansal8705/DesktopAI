@@ -6,7 +6,7 @@ Install with: pip install PyQt5
 import sys
 from queue import Queue
 
-from PyQt5.QtCore import QSize, Qt, QTimer
+from PyQt5.QtCore import QSize, Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QApplication,
@@ -32,6 +32,10 @@ logger = get_logger()
 class TransparentOverlayQt(QMainWindow):
     """A transparent overlay that displays transcriptions and responses using PyQt."""
 
+    # Emitting this signal from an executor thread queues UI updates on the Qt
+    # main thread. QTimer.singleShot from a worker has no event loop to target.
+    message_available = pyqtSignal()
+
     def __init__(self, message_timeout=5, exit_callback=None):
         """Initialize the overlay.
 
@@ -46,6 +50,8 @@ class TransparentOverlayQt(QMainWindow):
         self.message_queue = Queue()
         self.running = True
         self.on_new_message = None
+        self.on_recording_toggled = None
+        self.message_available.connect(self.process_messages)
 
         # Set up the UI
         self.setup_ui()
@@ -141,6 +147,20 @@ class TransparentOverlayQt(QMainWindow):
         control_layout.addWidget(self.send_btn)
         main_layout.addLayout(control_layout)
 
+        # Explicit recording works on macOS without requiring a platform-specific
+        # Porcupine wake-word model.
+        self.voice_btn = QPushButton("Start voice")
+        self.voice_btn.setCheckable(True)
+        self.voice_btn.setStyleSheet("""
+            background-color: #333333;
+            color: white;
+            border: none;
+            padding: 5px;
+            border-radius: 5px;
+        """)
+        self.voice_btn.clicked.connect(self.toggle_voice_recording)
+        main_layout.addWidget(self.voice_btn)
+
         # Set the central widget
         self.setCentralWidget(central_widget)
 
@@ -159,7 +179,7 @@ class TransparentOverlayQt(QMainWindow):
             self.move(event.globalPos() - self.drag_position)
             event.accept()
 
-    def close_event(self, event):
+    def closeEvent(self, event):  # noqa: N802 - Qt callback name is fixed by the framework.
         """Handle window close event."""
         self.running = False
         if self.exit_callback:
@@ -173,7 +193,7 @@ class TransparentOverlayQt(QMainWindow):
             status (str): Status message
             color (str): Color of the status indicator
         """
-        self.message_queue.put(("status", status, color))
+        self.put_message("status", status, color)
 
     def add_log_message(self, text, color="white"):
         label = QLabel(text)
@@ -191,7 +211,7 @@ class TransparentOverlayQt(QMainWindow):
     def put_message(self, msg_type, *args):
         """Put a message into the queue."""
         self.message_queue.put((msg_type, *args))
-        QTimer.singleShot(0, self.process_messages)  # Schedule async-safe execution
+        self.message_available.emit()
 
     def process_messages(self):
         """Process messages from the queue."""
@@ -212,12 +232,22 @@ class TransparentOverlayQt(QMainWindow):
                     text = args[0]
                     self.add_log_message(f"{config.ASSISTANT_NAME}: {text}", "#00FF00")  # Green
 
+                elif msg_type == "recording":
+                    active = args[0]
+                    self.voice_btn.setChecked(active)
+                    self.voice_btn.setText("Stop voice" if active else "Start voice")
+                    self.voice_btn.setEnabled(True)
+
             except Exception as e:
                 logger.error(f"Error processing message: {e}")
 
     def start(self):
         """Start the overlay."""
         self.update_status(f"{config.ASSISTANT_NAME} Active", "lightgreen")
+        self.show()
+        self.raise_()
+        self.activateWindow()
+        self.input_box.setFocus(Qt.ActiveWindowFocusReason)
 
     def shutdown(self):
         """Shut down the overlay."""
@@ -229,6 +259,14 @@ class TransparentOverlayQt(QMainWindow):
         self.input_box.clear()
         if message and self.on_new_message:
             executor.submit(self.on_new_message, message)
+
+    def toggle_voice_recording(self, active):
+        """Dispatch microphone work away from the Qt event loop."""
+        self.voice_btn.setEnabled(False)
+        if self.on_recording_toggled:
+            executor.submit(self.on_recording_toggled, active)
+        else:
+            self.put_message("recording", False)
 
 
 app = QApplication(sys.argv)
