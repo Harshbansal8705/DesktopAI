@@ -258,7 +258,7 @@ SPEAKER_SIMILARITY_THRESHOLD = 0.6  # Voice verification threshold
 ### LLM Configuration
 ```bash
 # In your .env file (or defaults in config.py)
-LLM_MODEL="meta-llama/llama-4-scout-17b-16e-instruct"
+LLM_MODEL="qwen/qwen3.8-27b"
 LLM_PROVIDER="groq"
 LLM_TEMPERATURE=0.8
 ```

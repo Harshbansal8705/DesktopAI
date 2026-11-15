@@ -120,7 +120,10 @@ class TTSPlayer(threading.Thread):
         self.stop_event.set()
         # Wait for the queue to be fully processed
         try:
-            self.tts_queue.join(timeout=1.0)
+            # Queue.join has no timeout.  The worker is daemonized, so do not
+            # block shutdown waiting for an interrupted network synthesis.
+            if self.tts_queue.empty():
+                self.tts_queue.join()
         except Exception as e:
             # If we time out, just continue with shutdown
             logger.error(f"Error joining TTS queue: {e}")
