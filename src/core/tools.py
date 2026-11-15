@@ -1,4 +1,5 @@
 import functools
+import platform
 import subprocess
 from typing import Literal
 
@@ -7,6 +8,7 @@ from adbutils.errors import AdbTimeout
 from langchain_core.tools import tool as _tool
 from langchain_core.tools.structured import StructuredTool
 from langchain_tavily import TavilySearch
+from langchain_tavily._utilities import TavilySearchAPIWrapper
 from PIL import ImageGrab
 
 from src.config import config
@@ -74,7 +76,7 @@ def adb_required(func):
 
 @tool
 def run_command(command: str) -> str:
-    """Run a shell command on the local Linux machine."""
+    """Run a shell command on the local machine."""
     return subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT, text=True)
 
 
@@ -83,11 +85,21 @@ def open_google_chrome(url: str | None, new_window: bool = False) -> str:
     """
     Open Google Chrome with the specified URL (if url is provided).
     """
-    command = f"google-chrome-stable {'--new-window' if new_window else ''} {url if url else ''}"
-    logger.info(f"[open_google_chrome] Command: {command}")
-
     try:
-        subprocess.Popen(command, shell=True)
+        if platform.system() == "Darwin":
+            command = ["open", "-a", "Google Chrome"]
+            if new_window:
+                command.insert(1, "-n")
+            if url:
+                command.append(url)
+        else:
+            command = ["google-chrome-stable"]
+            if new_window:
+                command.append("--new-window")
+            if url:
+                command.append(url)
+        logger.info(f"[open_google_chrome] Command: {command}")
+        subprocess.Popen(command)
         return f"Google Chrome opened with URL: {url}"
     except Exception as e:
         logger.error(f"[open_google_chrome] Error: {e}")
@@ -101,7 +113,10 @@ def open_whatsapp_web() -> str:
     """
     logger.info("[open_whatsapp_web] Opening WhatsApp Web...")
     try:
-        subprocess.Popen(["gtk-launch", "chrome-hnpfjngllnobngcgfapefoaidbinmjnm-Default.desktop"])
+        if platform.system() == "Darwin":
+            subprocess.Popen(["open", "https://web.whatsapp.com"])
+        else:
+            subprocess.Popen(["gtk-launch", "chrome-hnpfjngllnobngcgfapefoaidbinmjnm-Default.desktop"])
         return "WhatsApp Web launched."
     except Exception as e:
         logger.error(f"[open_whatsapp_web] Error: {e}")
@@ -171,8 +186,11 @@ def web_search(
     """
     Execute a search query using the Tavily Search API.
     """
+    if not config.TAVILY_API_KEY:
+        return "Web search is not configured: set TAVILY_API_KEY to enable it."
+
     search_tool = TavilySearch(
-        api_key=config.TAVILY_API_KEY,
+        api_wrapper=TavilySearchAPIWrapper(tavily_api_key=config.TAVILY_API_KEY),
         max_results=max_results,
         search_depth=search_depth,
     )

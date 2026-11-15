@@ -1,7 +1,6 @@
 import collections
 import os
 import struct
-import sys
 import threading
 import time
 
@@ -9,24 +8,27 @@ import numpy as np
 import pvporcupine
 import sounddevice as sd
 import soundfile as sf
-import torch
-from resemblyzer import VoiceEncoder, preprocess_wav
 
-torch.set_num_threads(1)
-
-from src.config import config  # noqa: E402
-from src.utils.logger import get_logger  # noqa: E402
-from src.utils.thread_executor import executor  # noqa: E402
-
-model, utils = torch.hub.load(repo_or_dir="snakers4/silero-vad", model="silero_vad")
-
-get_speech_timestamps, save_audio, read_audio, VADIterator, collect_chunks = utils
+from src.config import config
+from src.utils.logger import get_logger
+from src.utils.thread_executor import executor
 
 logger = get_logger()
 
 
 class Listener:
     def __init__(self, tts_player=None, overlay=None):
+        if not config.WAKE_WORD_ENABLED:
+            raise RuntimeError(
+                "Wake-word detection is disabled. Use the overlay text input, or set "
+                "WAKE_WORD_ENABLED=true only with a Porcupine model for this platform."
+            )
+        if config.PLATFORM != "Linux":
+            raise RuntimeError(
+                f"No bundled Porcupine wake-word model supports {config.PLATFORM}. "
+                "Set WAKE_WORD_ENABLED=false and use the overlay text input."
+            )
+
         # Audio config
         self.SAMPLE_RATE = config.SAMPLE_RATE
         self.CHANNELS = config.CHANNELS
@@ -64,6 +66,13 @@ class Listener:
 
         self.confidence_threshold = config.CONFIDENCE_THRESHOLD
 
+        # These imports can pull in Python-version-specific audio dependencies
+        # and the VAD model.  They are only needed when wake-word mode is active.
+        import torch
+        from resemblyzer import VoiceEncoder, preprocess_wav
+
+        torch.set_num_threads(1)
+        self.vad_model, _ = torch.hub.load(repo_or_dir="snakers4/silero-vad", model="silero_vad")
         self.voice_encoder = VoiceEncoder()
         self.OWNER_VOICE_FILE = config.OWNER_VOICE_FILE
         self.owner_embeddings = None
@@ -72,11 +81,10 @@ class Listener:
             self.owner_embeddings = self.voice_encoder.embed_utterance(preprocess_wav(self.OWNER_VOICE_FILE))
             logger.info("✅ Owner voice file found. Loading embeddings...")
         else:
-            logger.error(
-                "Owner voice file not found. Please record your voice and save it in data/owner.wav\n"
-                "Run `python setup/record_owner_voice.py` to record your voice."
+            raise FileNotFoundError(
+                "Owner voice file not found. Run `python setup/record_owner_voice.py` "
+                "to save it as data/owner.wav before enabling wake-word detection."
             )
-            sys.exit(1)
 
     def int2float(self, sound):
         abs_max = np.abs(sound).max()
@@ -105,7 +113,10 @@ class Listener:
                 audio_float32 = self.int2float(audio_chunk)
                 frames.append(audio_chunk)
 
-                confidence = model(torch.from_numpy(audio_float32), self.SAMPLE_RATE).item()
+                # Silero VAD accepts the NumPy buffer directly through Torch.
+                import torch
+
+                confidence = self.vad_model(torch.from_numpy(audio_float32), self.SAMPLE_RATE).item()
 
                 if confidence > self.confidence_threshold:
                     silence_frames = 0

@@ -46,7 +46,7 @@ def prompt(state: AgentState, config: RunnableConfig) -> list[Any]:
     user_profile = _build_user_profile()
 
     system_msg = f"""
-You are **{assistant_name}**, a witty, intelligent desktop AI assistant running locally on {owner_name}'s Linux machine.
+You are **{assistant_name}**, a witty, intelligent desktop AI assistant running locally on {owner_name}'s {app_config.PLATFORM} machine.
 
 ### 🧠 Your Purpose:
 

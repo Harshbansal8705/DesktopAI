@@ -1,7 +1,7 @@
 [project]
 name = "desktopai"
 version = "0.1.0"
-description = "An intelligent, voice-activated AI assistant for Linux desktop environments"
+description = "An intelligent AI desktop assistant with Linux wake-word support"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.12"
@@ -11,6 +11,7 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: End Users/Desktop",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
@@ -20,9 +21,13 @@ classifiers = [
 ]
 dependencies = [
     "adbutils>=2.9.3",
+    # Python 3.13 removed audioop; resemblyzer's audio stack still imports it.
+    "audioop-lts>=0.2.1; python_version >= '3.13'",
     "anthropic>=0.51.0",
     "colorama>=0.4.6",
-    "edge-tts>=7.0.2",
+    # 7.3.0 updates the Edge Read Aloud handshake required after Microsoft's
+    # legacy endpoint began returning WebSocket 403 responses.
+    "edge-tts>=7.3.0",
     "groq>=0.24.0",
     "langchain>=0.3.25",
     "langchain-anthropic>=0.3.13",
@@ -42,6 +47,8 @@ dependencies = [
     "resemblyzer>=0.1.4",
     "sounddevice>=0.5.2",
     "soundfile>=0.13.1",
+    # webrtcvad imports pkg_resources during installation; retain its provider.
+    "setuptools<81",
     "torch>=2.0.0",
 ]
 
