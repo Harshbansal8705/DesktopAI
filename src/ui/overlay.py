@@ -4,7 +4,7 @@ Install with: pip install PyQt5
 """
 
 import sys
-from queue import Queue
+from queue import Empty, Queue
 
 from PyQt5.QtCore import QSize, Qt, QTimer
 from PyQt5.QtGui import QFont
@@ -49,6 +49,11 @@ class TransparentOverlayQt(QMainWindow):
 
         # Set up the UI
         self.setup_ui()
+
+        # Poll queued updates on the main Qt thread
+        self.queue_timer = QTimer(self)
+        self.queue_timer.timeout.connect(self.process_messages)
+        self.queue_timer.start(50)
 
     def setup_ui(self):
         """Set up the user interface."""
@@ -147,21 +152,28 @@ class TransparentOverlayQt(QMainWindow):
         # Enable dragging
         self.drag_position = None
 
-    def mouse_press_event(self, event):
+    def mousePressEvent(self, event):  # noqa: N802
         """Handle mouse press event for dragging."""
         if event.button() == Qt.LeftButton:
             self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
             event.accept()
 
-    def mouse_move_event(self, event):
+    def mouseMoveEvent(self, event):  # noqa: N802
         """Handle mouse move event for dragging."""
-        if event.buttons() == Qt.LeftButton and self.drag_position:
+        if (event.buttons() & Qt.LeftButton) and self.drag_position is not None:
             self.move(event.globalPos() - self.drag_position)
             event.accept()
 
-    def close_event(self, event):
+    def mouseReleaseEvent(self, event):  # noqa: N802
+        """Handle mouse release event for dragging."""
+        if event.button() == Qt.LeftButton:
+            self.drag_position = None
+            event.accept()
+
+    def closeEvent(self, event):  # noqa: N802
         """Handle window close event."""
         self.running = False
+        self.queue_timer.stop()
         if self.exit_callback:
             self.exit_callback()
         event.accept()
@@ -174,6 +186,15 @@ class TransparentOverlayQt(QMainWindow):
             color (str): Color of the status indicator
         """
         self.message_queue.put(("status", status, color))
+
+    def _remove_log_message(self, label):
+        if not self.running:
+            return
+        try:
+            self.log_layout.removeWidget(label)
+            label.deleteLater()
+        except RuntimeError:
+            pass
 
     def add_log_message(self, text, color="white"):
         label = QLabel(text)
@@ -188,16 +209,24 @@ class TransparentOverlayQt(QMainWindow):
             lambda: self.scroll_area.verticalScrollBar().setValue(self.scroll_area.verticalScrollBar().maximum()),
         )
 
+        if self.message_timeout and self.message_timeout > 0:
+            QTimer.singleShot(
+                int(self.message_timeout * 1000),
+                lambda lbl=label: self._remove_log_message(lbl),
+            )
+
     def put_message(self, msg_type, *args):
         """Put a message into the queue."""
         self.message_queue.put((msg_type, *args))
-        QTimer.singleShot(0, self.process_messages)  # Schedule async-safe execution
 
     def process_messages(self):
         """Process messages from the queue."""
-        while not self.message_queue.empty():
+        if not self.running:
+            return
+
+        while True:
             try:
-                msg_type, *args = self.message_queue.get()
+                msg_type, *args = self.message_queue.get_nowait()
 
                 if msg_type == "status":
                     status, color = args
@@ -212,6 +241,8 @@ class TransparentOverlayQt(QMainWindow):
                     text = args[0]
                     self.add_log_message(f"{config.ASSISTANT_NAME}: {text}", "#00FF00")  # Green
 
+            except Empty:
+                break
             except Exception as e:
                 logger.error(f"Error processing message: {e}")
 
@@ -231,12 +262,11 @@ class TransparentOverlayQt(QMainWindow):
             executor.submit(self.on_new_message, message)
 
 
-app = QApplication(sys.argv)
-overlay = TransparentOverlayQt(message_timeout=5)
-
-
 # Alternative main function that can be used to test this GUI
 def main():
+    app = QApplication(sys.argv)
+    overlay = TransparentOverlayQt(message_timeout=5)
+    overlay.show()
     overlay.start()
 
     # Demo updating
