@@ -36,7 +36,7 @@ class TransparentOverlayQt(QMainWindow):
         """Initialize the overlay.
 
         Args:
-            message_timeout (int | float | None): Number of seconds after which messages fade out
+            message_timeout (int): Number of seconds after which messages fade out
             exit_callback (callable): Function to call when the overlay is closed
         """
         super().__init__()
@@ -46,12 +46,11 @@ class TransparentOverlayQt(QMainWindow):
         self.message_queue = Queue()
         self.running = True
         self.on_new_message = None
-        self.drag_position = None
 
         # Set up the UI
         self.setup_ui()
 
-        # Poll the thread-safe message queue on the main Qt GUI thread
+        # Poll queued updates on the main Qt thread
         self.queue_timer = QTimer(self)
         self.queue_timer.timeout.connect(self.process_messages)
         self.queue_timer.start(50)
@@ -150,116 +149,89 @@ class TransparentOverlayQt(QMainWindow):
         # Set the central widget
         self.setCentralWidget(central_widget)
 
+        # Enable dragging
+        self.drag_position = None
+
     def mousePressEvent(self, event):  # noqa: N802
         """Handle mouse press event for dragging."""
         if event.button() == Qt.LeftButton:
             self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
             event.accept()
-            return
-        super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):  # noqa: N802
         """Handle mouse move event for dragging."""
         if (event.buttons() & Qt.LeftButton) and self.drag_position is not None:
             self.move(event.globalPos() - self.drag_position)
             event.accept()
-            return
-        super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):  # noqa: N802
-        """Reset drag state when mouse button is released."""
+        """Handle mouse release event for dragging."""
         if event.button() == Qt.LeftButton:
             self.drag_position = None
             event.accept()
-            return
-        super().mouseReleaseEvent(event)
 
     def closeEvent(self, event):  # noqa: N802
         """Handle window close event."""
         self.running = False
-        if hasattr(self, "queue_timer") and self.queue_timer.isActive():
-            self.queue_timer.stop()
+        self.queue_timer.stop()
         if self.exit_callback:
-            try:
-                self.exit_callback()
-            except Exception as e:
-                logger.error(f"Error in exit callback: {e}")
+            self.exit_callback()
         event.accept()
 
     def update_status(self, status, color="gray"):
-        """Thread-safe status indicator update.
+        """Update the status indicator.
 
         Args:
             status (str): Status message
             color (str): Color of the status indicator
         """
-        self.put_message("status", status, color)
-
-    def _scroll_to_bottom(self):
-        """Scroll the message area to the latest entry."""
-        if not self.running:
-            return
-        scrollbar = self.scroll_area.verticalScrollBar()
-        scrollbar.setValue(scrollbar.maximum())
+        self.message_queue.put(("status", status, color))
 
     def _remove_log_message(self, label):
-        """Safely remove an expired message label from the layout."""
         if not self.running:
             return
         try:
-            if label is not None and label.parent() is not None:
-                self.log_layout.removeWidget(label)
-                label.deleteLater()
+            self.log_layout.removeWidget(label)
+            label.deleteLater()
         except RuntimeError:
-            # Widget already deleted by Qt
             pass
 
     def add_log_message(self, text, color="white"):
-        """Add a styled message label to the log and schedule timeout removal."""
         label = QLabel(text)
         label.setFont(QFont("Arial", 10))
         label.setStyleSheet(f"color: {color};")
         label.setWordWrap(True)
         self.log_layout.insertWidget(self.log_layout.count() - 1, label)
 
-        # Auto-scroll to bottom after layout recalculation
-        QTimer.singleShot(50, self._scroll_to_bottom)
+        # Auto-scroll to bottom
+        QTimer.singleShot(
+            50,
+            lambda: self.scroll_area.verticalScrollBar().setValue(self.scroll_area.verticalScrollBar().maximum()),
+        )
 
-        # Schedule automatic message removal if message_timeout is configured
         if self.message_timeout and self.message_timeout > 0:
-            timeout_ms = int(self.message_timeout * 1000)
-            QTimer.singleShot(timeout_ms, lambda lbl=label: self._remove_log_message(lbl))
+            QTimer.singleShot(
+                int(self.message_timeout * 1000),
+                lambda lbl=label: self._remove_log_message(lbl),
+            )
 
     def put_message(self, msg_type, *args):
-        """Thread-safely enqueue a UI update message for the main Qt thread."""
-        if not self.running:
-            return
+        """Put a message into the queue."""
         self.message_queue.put((msg_type, *args))
 
     def process_messages(self):
-        """Process queued UI updates on the main Qt thread."""
+        """Process messages from the queue."""
         if not self.running:
             return
 
         while True:
             try:
-                item = self.message_queue.get_nowait()
-            except Empty:
-                break
-
-            try:
-                if not isinstance(item, tuple) or len(item) < 2:
-                    logger.warning(f"Ignoring malformed overlay message: {item!r}")
-                    continue
-
-                msg_type, *args = item
+                msg_type, *args = self.message_queue.get_nowait()
 
                 if msg_type == "status":
-                    if len(args) < 2:
-                        raise ValueError(f"Invalid status payload: {args!r}")
-                    status, color = args[0], args[1]
+                    status, color = args
                     self.status_indicator.setStyleSheet(f"color: {color};")
-                    self.status_text.setText(str(status))
+                    self.status_text.setText(status)
 
                 elif msg_type == "query":
                     text = args[0]
@@ -269,9 +241,8 @@ class TransparentOverlayQt(QMainWindow):
                     text = args[0]
                     self.add_log_message(f"{config.ASSISTANT_NAME}: {text}", "#00FF00")  # Green
 
-                else:
-                    logger.warning(f"Unknown overlay message type: {msg_type!r}")
-
+            except Empty:
+                break
             except Exception as e:
                 logger.error(f"Error processing message: {e}")
 
@@ -291,6 +262,7 @@ class TransparentOverlayQt(QMainWindow):
             executor.submit(self.on_new_message, message)
 
 
+# Alternative main function that can be used to test this GUI
 def main():
     app = QApplication(sys.argv)
     overlay = TransparentOverlayQt(message_timeout=5)
